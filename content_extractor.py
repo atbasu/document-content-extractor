@@ -12,8 +12,8 @@ def get_prompt(text, config):
     prompt += f"In the above list, the name of each field is succeeded by a description of the field " \
               f"after a ':'. It is not necessary that the piece of text " \
               f"contains all this information.  In this case leave the value of that field blank. If no fields are " \
-              f"extracted return an empty json\nReturn it in a format that can be converted into a " \
-              f"ptyhon dictionary using json.loads where the field name is the key and extracted value is the value " \
+              f"extracted return an empty json\nReturn it in a json format with the property name is the field name " \
+              f"and the value is the extracted value. Both should be enclosed in double quotes " \
               f"\nText:\n{text}"
     return prompt
 
@@ -69,7 +69,7 @@ def extract_content(text, config, api_key, model, results_folder, file_name, run
         json.dump(response_dict, outfile)
 
     # return response
-    result = json.loads(response["choices"][0]["text"].replace("\\", "").strip()) if api_key == "test" else json.loads(
-        re.sub(r'[^\x00-\x7f]', r'', response.choices[0].text.strip()))
+    result = json.loads(response["choices"][0]["text"].replace("\\", "").strip()) if api_key == "test" else \
+        json.loads(re.sub(r'[^\x00-\x7f]', r'', response.choices[0].text.strip()))
 
     return result, response["usage"], file_name
