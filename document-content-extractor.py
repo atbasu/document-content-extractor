@@ -16,14 +16,14 @@ def clear_screen():
     os.system('cls' if os.name == 'nt' else 'clear')
 
 
-def write_result_to_json(dictionary, run_id, folder_name):
+def write_result_to_json(dictionary, file_name, folder_name):
     # Create directory if it doesn't exist
-    if dictionary is not None:
+    if dictionary:
         if not os.path.exists(folder_name):
             os.mkdir(folder_name)
 
         # Create full file path for results
-        result_file_path = f'{folder_name}/{run_id}.json'
+        result_file_path = f'{folder_name}/{file_name}'
 
         # Write result to JSON file
         with open(result_file_path, 'w') as f:
@@ -42,7 +42,8 @@ def upload_and_process_document(file_folder, results_folder, file_path, api_key,
         config = json.load(f)
 
     text = read_document(file_path)
-    content, usage, api_response = extract_content(text, config, api_key, model, results_folder, runid)
+    content, usage, api_response = extract_content(text, config, api_key, model, results_folder,
+                                                   file_path.split('/')[-1], runid)
     return file_path, api_key, content, config, usage, api_response
 
 
@@ -171,8 +172,11 @@ def main():
     print(ascii_table)
     # check if there are any incorrect extractions
     corrections = check_for_errors(json_result)
-    corrections_file = write_result_to_json(corrections, run_id,
-                                            results_folder) if corrections else "No corerctions file generated"
+    corrections_file = write_result_to_json(
+        corrections,
+        f"{file_path.split('/')[-1]}_corrections_{run_id}",
+        results_folder
+    )
     # calculate success rate as %age of fields that were extracted correctly
     success_rate = 100 - (len(corrections) / len(json_result) * 100)
     # store metrics in a csv file
