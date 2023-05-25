@@ -109,14 +109,14 @@
     "required": true,
     "description": "the type of instructions added to this closing confirmation"
   },
-  "Instructions": {
-    "type": "string",
-    "required": true,
-    "description": "the detailed instructions added to this closing confirmation"
-  },
   "Scan Backs Needed": {
     "type": "string",
     "required": true,
     "description": "whether any scan backs are needed for this closing confirmaiton"
+  },
+  "Person of Contact Email": {
+    "type": "string",
+    "required": true,
+    "description": "email address for the agent"
   }
 }
