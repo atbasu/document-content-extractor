@@ -57,17 +57,20 @@ def upload_and_process_document(file_folder, results_folder, file_path, api_key,
         config = json.load(f)
 
     text = read_document(file_path)
-    content, usage, api_response = extract_content_async(
-        text=text,
-        config=config,
-        api_key=api_key,
-        model=model,
-        results_folder=results_folder,
-        file_name=file_path.split('/')[-1],
-        run_id=runid,
-        splits=splits
+    result = extract_content_async(
+        event=dict(
+            text=text,
+            config=config,
+            api_key=api_key,
+            model=model,
+            results_folder=results_folder,
+            file_name=file_path.split('/')[-1],
+            run_id=runid,
+            splits=splits
+        ),
+        context=None
     )
-    return file_path, api_key, content, config, usage, api_response
+    return file_path, api_key, result['result'], config, result['usage_data'], result['file_name']
 
 
 def write_metrics(run_id, run_time, file_path, api_key, success_rate, usage, model, folder_name, file_name='metrics'):
@@ -212,6 +215,7 @@ def main():
         splits=args.splits
     )
     # stop timer
+    print(json_result)
     run_time = time.monotonic() - start_time
     # dump data into files and print result in ascii table
     ascii_table = generate_ascii_table_from_json(json_result, config)
@@ -221,7 +225,7 @@ def main():
     corrections = check_for_errors(json_result)
     corrections_file = write_result_to_json(
         corrections,
-        f"{file_path.split('/')[-1]}_corrections_{run_id}",
+        f"{file_path.split('/')[-1]}_corrections_{run_id}.json",
         env_vars['results_folder']
     )
     # calculate success rate as %age of fields that were extracted correctly

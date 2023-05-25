@@ -17,7 +17,7 @@ def get_prompt_old(text, config):
 
 def get_prompts(text, config, splits=1):
     # only get those fields where required is set to true
-    fields = [f'[{field}]: [{properties["description"]}]' for field, properties in config.items() if
+    fields = [f'{field}: {properties["description"]}' for field, properties in config.items() if
               properties["required"]]
 
     # split the fields into chunks where number of chunks = splits
@@ -29,7 +29,7 @@ def get_prompts(text, config, splits=1):
     prompts = [
         f"Extract the values of the following fields from the closing confirmation text:\n" + '\n'.join(
             fields[i * chunk_size:(i + 1) * chunk_size]) +
-        f"\nEnclose both the field name and the value in square brackets.\nText:\n{text}"
+        f"\nDo not change the name of the fields. Text:\n{text}"
         for i in range(splits)
     ]
 
@@ -212,7 +212,34 @@ async def process_prompts(text, config, splits, model, api_key):
         return prompts, responses
 
 
-def process_results(prompts, results):
+def extract_kv(match):
+    key = ''
+    value = ''
+    for item in match:
+        if key == '' and item != '':
+            key = item.strip().strip('[]')
+        elif key != '' and value == '' and item != '':
+            value = item.strip().strip('[]')
+    return {key: value}
+
+
+def extract_values(text, keys):
+    result = {}
+    keys = list(keys)
+    for i, key in enumerate(keys):
+        start_index = text.find(key)
+        if start_index != -1:
+            start_index += len(key) + 2  # Skip the key and the colon, accounting for the space after colon
+            if i < len(keys) - 1:
+                end_index = text.find(keys[i + 1], start_index)
+            else:
+                end_index = len(text)
+            value = text[start_index:end_index].strip().split(',')[0]
+            result[key] = value
+    return result
+
+
+def process_results(prompts, results, keys):
     # process response by:
     # 1. creating an output text file containing all prompts and entire response
     # 2. extracting all key value pairs in the format [..]: [...]
@@ -221,12 +248,18 @@ def process_results(prompts, results):
     output_file = ''
     output_dict = dict()
     usage_dict = defaultdict(int)
-    pattern = r'\[(.*?)\]:\s*\[(.*?)\]'
+    # pattern = r'\[(.*?)\]:\s*\[(.*?)\]'
+    # pattern = r'\[\s*(.*?)\s*\]:\s*(?:\[(.*?)\]|([^\[\]\n]*))|(?:\s*(.*?)\s*:\s*\[(.*?)\])'
 
     for i, (prompt, response) in enumerate(zip(prompts, results)):
         output_file += f'----------------[prompt {i + 1}]------------------\n{prompt}\n[response {i + 1}]\n{response}\n----------------------------------\n'
+        """
         matches = re.findall(pattern, response["choices"][0]["text"])
-        output_dict.update({key.strip(): value.strip() for key, value in matches})
+        for match in matches:
+            output_dict.update(extract_kv(match))
+        """
+        output_dict.update(extract_values(response["choices"][0]["text"], keys))
+
         for key, value in response["usage"].items():
             usage_dict[key] += value
 
@@ -235,7 +268,8 @@ def process_results(prompts, results):
     return output_file, output_dict, usage_dict
 
 
-def extract_content_async(text, config, api_key, model, results_folder, file_name, run_id, splits=1):
+"""
+def extract_content_async_old(text, config, api_key, model, results_folder, file_name, run_id, splits=1):
     loop = asyncio.get_event_loop()
     prompts, results = loop.run_until_complete(process_prompts(text, config, splits, model, api_key))
 
@@ -247,6 +281,37 @@ def extract_content_async(text, config, api_key, model, results_folder, file_nam
         outfile.write(output_file)
 
     return result, usage_data, file_name
+"""
+
+
+def extract_content_async(event, context):
+    """
+    This code assumes that if it is used as an AWS Lambda function,
+    the necessary dependencies (aiohttp and openai)
+    are installed in the Lambda environment
+    """
+    loop = asyncio.get_event_loop()
+    prompts, results = loop.run_until_complete(
+        process_prompts(
+            event['text'],
+            event['config'],
+            event.get('splits', 1),
+            event['model'],
+            event['api_key']
+        )
+    )
+
+    output_file, result, usage_data = process_results(prompts, results, event['config'].keys())
+
+    file_name = f"{event['results_folder']}/{event['file_name']}_run_results_{event['run_id']}.txt"
+    with open(file_name, 'w') as outfile:
+        outfile.write(output_file)
+
+    return {
+        'result': result,
+        'usage_data': usage_data,
+        'file_name': file_name
+    }
 
 
 def extract_content(text, config, api_key, model, results_folder, file_name, run_id):
@@ -290,3 +355,6 @@ def extract_content(text, config, api_key, model, results_folder, file_name, run
     result = json.loads(cleaned_text)
 
     return result, response["usage"], file_name
+
+
+text_blob_new = '\nhappy go lucky Appointment Date and Time : 10/12/2022 10:00 AM\nFile Number: ORG-369006\nOrder on behalf of : DEANNA GOOD, Product type : Home Equity Loan\n'
