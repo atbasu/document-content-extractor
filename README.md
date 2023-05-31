@@ -1,8 +1,7 @@
 # Document Content Extractor
 
-------------------
-## Getting Started
 
+## Getting Started
 
 Step 1. download the project code
 Step 2. install the latest version of python
