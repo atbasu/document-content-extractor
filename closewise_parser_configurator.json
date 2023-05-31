@@ -1,120 +1,120 @@
 {
-  "SignerName": {
+  "signerName": {
     "type": "string",
     "required": true,
     "description": "This is the name of the borrower or the signer, not the vendor."
   },
-  "Email": {
+  "email": {
     "type": "string",
     "required": true,
     "description": "This is the email of each signer"
   },
-  "PhoneNumber": {
+  "phoneNumber": {
     "type": "string",
     "required": true,
     "description": "This is the phone number of each signer"
   },
-  "IsTheSignerAForeignNational?": {
+  "isTheSignerAForeignNational?": {
     "type": "boolean",
     "required": true,
     "description": "Is the signer of this closing confirmation a foreign national"
   },
-  "Language": {
+  "language": {
     "type": "string",
     "required": true,
     "description": "Language chosen by the signer"
   },
-  "Timezone": {
+  "timezone": {
     "type": "string",
     "required": true,
     "description": "The timezone of the signer"
   },
-  "PropertyAddress": {
+  "propertyAddress": {
     "type": "string",
     "required": true,
     "description": "The address of the property for this loan"
   },
-  "AppointmentAddress": {
+  "appointmentAddress": {
     "type": "string",
     "required": true,
     "description": "This is the address where the closing confirmation was signed"
   },
-  "AppointmentDateAndTime": {
+  "appointmentDateTime": {
     "type": "string",
     "required": true,
     "description": "The date on which the closing confirmation was signed"
   },
-  "FileNumber": {
+  "fileNumber": {
     "type": "string",
     "required": true,
     "description": "Any file numbers associated with the closing confirmation"
   },
-  "OrderOnBehalfOf": {
+  "orderOnBehalfOf": {
     "type": "string",
     "required": true,
     "description": "The name of the person on whose behalf this closing confirmation is being signed"
   },
-  "SigningType": {
+  "signingType": {
     "type": "string",
     "required": true,
     "description": "How the signing was done"
   },
-  "ProductType": {
+  "productType": {
     "type": "string",
     "required": true,
     "description": "The loan product type"
   },
-  "CompanyFee": {
+  "companyFee": {
     "type": "string",
     "required": true,
     "description": "This is the fee charged by the loan company in dollars"
   },
-  "Client": {
+  "client": {
     "type": "string",
     "required": true,
     "description": "The name of the client"
   },
-  "AgentName": {
+  "agentName": {
     "type": "string",
     "required": true,
     "description": "The name of the agent or vendor responsible for the closing confirmation"
   },
-  "AgentFee": {
+  "agentFee": {
     "type": "string",
     "required": true,
     "description": "The fee charged by the agent in dollars. If only one fee is listed then it's not the agent fee."
   },
-  "WitnessNumber": {
+  "witnessNumber": {
     "type": "string",
     "required": true,
     "description": "The number of witnesses for the signing of this closing confirmation"
   },
-  "UploadFiles": {
+  "uploadFiles": {
     "type": "boolean",
     "required": true,
     "description": "If any files were uploaded as part of this closing confirmation"
   },
-  "InternalNotes": {
+  "internalNotes": {
     "type": "string",
     "required": true,
     "description": "Any internal notes or instructions present in this closing confirmation, these maybe present as comments, but the instructions will be directed at the vendor/agent and not intended for the signer/borrower."
   },
-  "ExternalNotes": {
+  "externalNotes": {
     "type": "string",
     "required": true,
     "description": "any external notes or instructions added to this closing confirmation, these maybe present as comments, but the notes will be directed at the borrower or signer."
   },
-  "InstructionType": {
+  "instructionType": {
     "type": "string",
     "required": true,
     "description": "the type of instructions added to this closing confirmation"
   },
-  "ScanBacksNeeded": {
+  "scanBacksNeeded": {
     "type": "string",
     "required": true,
     "description": "whether any scan backs are needed for this closing confirmaton"
   },
-  "PersonOfContactEmail": {
+  "personOfContactEmail": {
     "type": "string",
     "required": true,
     "description": "email address for the agent"
