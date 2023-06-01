@@ -34,7 +34,7 @@ def generate_ascii_table_from_string(input_str, config):
             last_name = name
         except ValueError:
             # Handle the case where there is no ':' in the line
-            if last_name is not '':
+            if last_name != '':
                 table[-1] += line.strip()
                 result[last_name] += line.strip()
             else:
@@ -54,9 +54,6 @@ def generate_ascii_table_from_json(input_json, config):
     # lines = input_json.strip().split('\n')
     possible_fields = config.keys()
     max_field_name_len = longest_value_length(possible_fields) + 1
-
-    # result = dict()
-    last_name = ''
 
     # Create the header row for the ASCII table
     header = f"{'Field Name':<{max_field_name_len}}| {'Field Value':<}"

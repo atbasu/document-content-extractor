@@ -1,16 +1,18 @@
-from flask import Flask, jsonify, request, make_response
-from flask_jwt_extended import JWTManager
-from functools import wraps
-from document_content_extractor import *
-import time
-import jwt
 import asyncio
+from functools import wraps
+
+import jwt
 import nest_asyncio
+from flask import Flask, jsonify, request
+
+from document_content_extractor import *
+
 nest_asyncio.apply()
 from gevent.pywsgi import WSGIServer
 
 app = Flask(__name__)
 app.config['JWT_SECRET_KEY'] = 'closewise-secret'
+
 
 # Decorators
 def token_required(f):
@@ -23,8 +25,8 @@ def token_required(f):
        if not token:
             return jsonify({'message': 'Token is missing!'}), 401
        try:
-          data = jwt.decode(token, app.config['JWT_SECRET_KEY'], algorithms=['HS256'])
-          request.token_data = data
+            data = jwt.decode(token, app.config['JWT_SECRET_KEY'], algorithms=['HS256'])
+            request.token_data = data
        except jwt.ExpiredSignatureError:
             return jsonify({'message': 'Token has expired!'}), 401
        except jwt.InvalidTokenError:
@@ -32,13 +34,12 @@ def token_required(f):
        return f(*args, **kwargs)
    return decorated
 
-async def extract_content(filePath):
-   return runApp(filePath)
 
 # Routeslk
 @app.route('/api/v1/multipart-parse', methods=['POST'])
 @token_required
-def get_users():
+def process_text():
+    file_path = ''
     try:
        file = request.files['file']
        if file:
