@@ -141,7 +141,7 @@ def run_app(file_path):
         dict(
             env=env_vars,
             run_id=run_id,
-            run_time=run_time,
+            run_time=run_time
         )
     )
     return result
