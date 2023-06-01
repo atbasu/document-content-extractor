@@ -1,7 +1,7 @@
 # Document Content Extractor
+_descroption of the tool coming soon_
 
-
-## Getting Started
+## Getting Started with the CLI
 
 Step 1. download the project code
 Step 2. install the latest version of python
@@ -11,8 +11,8 @@ pip3 install -r requirements.txt
 ```
 Step 4. in the project directory create three folders as defined in the config.ini file
 Step 5. update the key and other settings in the config.ini file
-Step 6. move a pdf file that you want to parse into the `sample forms` folder
-Step 7. run the program:
+Step 6.1.  move a pdf file that you want to parse into the `sample forms` folder
+Step 7.1. run the program:
 ```
 python document-content-extractor.py
 ```
@@ -101,6 +101,48 @@ Here are a few steps you can try to resolve the issue:
 
 -----
 
+## Using the API
+
+Step 6.2. Once you've completed step 5 in Getting started with the CLI, then start the app with the command:
+```
+(venv) (base) atbasu@x86_64-apple-darwin13 document-content-extractor % python3.11 app.py
+```
+if all goes well, this should kickstart the api on `http://127.0.0.1:5000` and you should see the following on your terminal:
+```
+ * Serving Flask app 'app'
+ * Debug mode: on
+INFO:werkzeug:WARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.
+ * Running on http://127.0.0.1:5000
+INFO:werkzeug:Press CTRL+C to quit
+INFO:werkzeug: * Restarting with stat
+WARNING:werkzeug: * Debugger is active!
+INFO:werkzeug: * Debugger PIN: 540-404-850
+```
+Step 7.2 Now you can use your favoriate api invocation method. To test we recommend trying it with postman.
+_screenshots coming soon_
+
+### API input
+_coming soon_
+
+### API output
+
+The api will always return a dictionary with the following keys:
+```
+{
+  'result' : None if there was an error processing the request otherwise it is a dictinoary whose keys are each of the fields to be extracted, and the value is the extracted content from the file
+  'usage_data': None if there was an error processing the request otherwise it is a dictinoary whose keys are:
+total_tokens, prompt_tokens, response_tokens
+  'result_file': None if there is an error otherwise it's location where the results of each prompt is stored for analysis
+  'error': None if there a valid resonse otherewise it's another dictionary with the keys exception which contains the exceoption object, and msg whch contains the processed traceback message.
+  'file_path': path of the file that was read,
+  'api_key': Open AI api key used to run the query,
+  'config': the parser configuration used to generate the query prompts,
+  'emv' : a dictinoary containig all the environment variables used in processing the query,
+  'run_id': unique hexadecial identifier generated when each query is processed,
+  'run_time': time taken in second for open ai apis to process the queryies and return a result
+}
+```
+
 ## Repo Walkthrough
 
-
+_coming soon_
