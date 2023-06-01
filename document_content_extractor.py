@@ -1,60 +1,27 @@
-import argparse
-import configparser
 import csv
-import json
-import os
 import time
 import uuid
 from datetime import datetime
 
-# noinspection PyUnresolvedReferences
-import PyPDF2
-
 from ascii_output_generator import generate_ascii_table_from_json
 from content_extractor import extract_content_async
+from utils import *
 
 
-# from document_reader import read_document
-
-
-def clear_screen():
-    os.system('cls' if os.name == 'nt' else 'clear')
-
-
-def read_document(file_path):
-    with open(file_path, 'rb') as file:
-        pdf_reader = PyPDF2.PdfReader(file)
-        text = ""
-        for page in pdf_reader.pages:
-            text += page.extract_text()
-        return text
-
-
-def write_result_to_json(dictionary, file_name, folder_name):
-    # Create directory if it doesn't exist
-    if dictionary:
-        if not os.path.exists(folder_name):
-            os.mkdir(folder_name)
-
-        # Create full file path for results
-        result_file_path = f'{folder_name}/{file_name}'
-
-        # Write result to JSON file
-        with open(result_file_path, 'w') as f:
-            json.dump(dictionary, f)
-    else:
-        result_file_path = "no data for this file"
-
-    return result_file_path
-
-
-def upload_and_process_document(file_folder, results_folder, file_path, api_key, model, parser_config, runid, splits=1):
+def upload_and_process_document(
+        file_folder,
+        results_folder,
+        file_path,
+        api_key,
+        model,
+        config,
+        config_path,
+        run_id
+):
     file_path = f"{file_folder}/{input('Enter name of file : ').strip()}" if file_path is None else file_path
     api_key = input("Enter Open AI api key: ").strip() if (
             api_key is None or api_key == "YOUR_API_KEY_HERE") else api_key
-    print(f"Processing {file_path} provided using {api_key} and parser configuration from {parser_config}")
-    with open(parser_config, 'r') as f:
-        config = json.load(f)
+    print(f"Processing {file_path} provided using {api_key} and parser configuration from {config_path}")
 
     text = read_document(file_path)
     result = extract_content_async(
@@ -65,12 +32,18 @@ def upload_and_process_document(file_folder, results_folder, file_path, api_key,
             model=model,
             results_folder=results_folder,
             file_name=file_path.split('/')[-1],
-            run_id=runid,
-            splits=splits
+            run_id=run_id
         ),
         context=None
     )
-    return file_path, api_key, result['result'], config, result['usage_data'], result['file_name']
+    result.update(
+        dict(
+            file_path=file_path,
+            api_key=api_key,
+            config=config,
+        )
+    )
+    return result
 
 
 def write_metrics(run_id, run_time, file_path, api_key, success_rate, usage, model, folder_name, file_name='metrics'):
@@ -145,73 +118,47 @@ def check_for_errors(result):
             return corrections
 
 
-def read_args(api_key, model, parser_config, splits):
-    # read user provided arguments
-    parser = argparse.ArgumentParser(description='Extract and process content from a document')
-    parser.add_argument('--file', help='path to document file', default=None)
-    parser.add_argument('--api-key', help='OpenAI API key', default=api_key)
-    parser.add_argument(
-        '--model',
-        help='OpenAI model name see https://platform.openai.com/docs/models/overview',
-        default=model)
-    parser.add_argument(
-        '--parser-config',
-        help='path to json file containing parser configuration',
-        default=parser_config)
-    parser.add_argument(
-        '--splits',
-        help='number of splits to divide prompt into',
-        default=splits)
-    return parser.parse_args()
-
-
-def read_env_vars():
-    # read environment variables from config file
-    config = configparser.ConfigParser()
-    config.read('config.ini')
-    env_vars = dict(
-        api_key=config.get('openai', 'api_key', fallback=None),
-        model=config.get('openai', 'model', fallback='text-davinci-003'),
-        parser_config=config.get('extractor', 'parser_config', fallback='./closewise_parser_configurator.json'),
-        file_folder=config.get('extractor', 'file_folder', fallback='./sample forms'),
-        results_folder=config.get('extractor', 'results_folder', fallback='./run_results'),
-        metrics_folder=config.get('extractor', 'metrics_folder', fallback='./run_metrics'),
-        splits=int(config.get('prompt_eng', 'splits', fallback=1)),
-    )
-
-    return env_vars
-
-def runApp(file_path):
+def run_app(file_path):
     run_id = uuid.uuid4().hex
     env_vars = read_env_vars()
-     
+    with open(env_vars['parser_config'], 'r') as f:
+        config = json.load(f)
+
     start_time = time.monotonic()
-    file_path, api_key, json_result, config, usage, result_file = upload_and_process_document(
+    result = upload_and_process_document(
         file_folder=env_vars['file_folder'],
         results_folder=env_vars['results_folder'],
         file_path=file_path,
         api_key=env_vars['api_key'],
         model=env_vars['model'],
-        parser_config=env_vars['parser_config'],
-        runid=run_id,
-        splits=env_vars['splits']
+        config=config,
+        config_path=env_vars['parser_config'],
+        run_id=run_id
     )
-    
+
     run_time = time.monotonic() - start_time
-    return run_id, run_time, file_path, api_key, usage, env_vars['model'], json_result
-    
+    result.update(
+        dict(
+            env=env_vars,
+            run_id=run_id,
+            run_time=run_time,
+        )
+    )
+    return result
+
+
 def main():
-    # TODO :
-    #  1. fix problem with larger documents - done
-    #  2. improve document processing time - done
-    #  3. fix bug with metrics file, it isn't updating
-    #  4. convert content_extractor.py to a lambda function
-    #  5. add switch for prompt configuration settings - done
     # generate unique hex id for this run of the extractor
     run_id = uuid.uuid4().hex
 
-    env_vars = read_env_vars() # read all environment variables form config.ini
+    env_vars = read_env_vars()  # read all environment variables form config.ini
     args = read_args(env_vars['api_key'], env_vars['model'], env_vars['parser_config'], env_vars['splits'])
+    model = args.model
+    api_key = args.api_key
+    file_path = args.file
+    results_folder = env_vars['results_folder']
+    with open(args.parser_config, 'r') as f:
+        config = json.load(f)
 
     # start timer to calculate run time
     per_token_costs = {
@@ -222,40 +169,57 @@ def main():
     }
 
     start_time = time.monotonic()
-    file_path, api_key, json_result, config, usage, result_file = upload_and_process_document(
+    result = upload_and_process_document(
         file_folder=env_vars['file_folder'],
-        results_folder=env_vars['results_folder'],
-        file_path=args.file,
-        api_key=args.api_key,
-        model=args.model,
-        parser_config=args.parser_config,
-        runid=run_id,
-        splits=args.splits
+        results_folder=results_folder,
+        file_path=file_path,
+        api_key=api_key,
+        model=model,
+        config=config,
+        config_path=env_vars['parser_config'],
+        run_id=run_id
     )
+    file_path = result['file_path']
     # stop timer
-    print(json_result)
     run_time = time.monotonic() - start_time
-    # dump data into files and print result in ascii table
-    ascii_table = generate_ascii_table_from_json(json_result, config)
-    clear_screen()
-    print(ascii_table)
-    # check if there are any incorrect extractions
-    corrections = check_for_errors(json_result)
-    corrections_file = write_result_to_json(
-        corrections,
-        f"{file_path.split('/')[-1]}_corrections_{run_id}.json",
-        env_vars['results_folder']
-    )
-    # calculate success rate as %age of fields that were extracted correctly
-    success_rate = 100 - (len(corrections) / len(json_result) * 100)
-    # store metrics in a csv file
-    metrics_file = write_metrics(run_id, run_time, file_path, api_key, success_rate, usage, args.model,
-                                 env_vars['metrics_folder'])
-    # store processing results in a json file
-    # print run results
-    clear_screen()
-    print(
-        f"File processing results:\n------------------------\n1. file : {file_path}\n2. metrics : {metrics_file}\n3. parsed results : {result_file}\n4. corrections : {corrections_file}\n5. cost : {usage['total_tokens'] * per_token_costs[args.model]}\n6. total run time : {run_time}")
+    if result['error'] is None:
+        json_result = result['result']
+        usage = result['usage_data']
+        result_file = result['result_file']
+        # print(json_result)
+        # dump data into files and print result in ascii table
+        ascii_table = generate_ascii_table_from_json(json_result, config)
+        clear_screen()
+        print(ascii_table)
+        # check if there are any incorrect extractions
+        corrections = check_for_errors(json_result)
+        corrections_file = write_result_to_json(
+            corrections,
+            f"{file_path.split('/')[-1]}_corrections_{run_id}.json",
+            results_folder
+        )
+        # calculate success rate as %age of fields that were extracted correctly
+        success_rate = 100 - (len(corrections) / len(json_result) * 100)
+        # store metrics in a csv file
+        metrics_file = write_metrics(
+            run_id,
+            run_time,
+            file_path,
+            result['api_key'],
+            success_rate,
+            usage,
+            model,
+            env_vars['metrics_folder']
+        )
+        # store processing results in a json file
+        # print run results
+        clear_screen()
+        print(
+            f"File processing results:\n------------------------\n1. file : {file_path}\n2. metrics : {metrics_file}\n3. parsed results : {result_file}\n4. corrections : {corrections_file}\n5. cost : {usage['total_tokens'] * per_token_costs[args.model]}\n6. total run time : {run_time}")
+    else:
+        print(
+            f"There was an error in processing this file:\n{result['error']['msg']}"
+        )
 
 
 if __name__ == '__main__':
