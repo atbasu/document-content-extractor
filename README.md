@@ -1,7 +1,14 @@
 # Document Content Extractor
-_descroption of the tool coming soon_
+The Document Content Extractor is a tool that can be used to extract semantic information from a pdf text file. This tool is useful when the structure and format of the text to be parsed in dynamic and the information to be extracted is semantic as opposed to syntactic in nature. It's not as fast as a static parser would be, but it can extract information that would be hard to encode in a static parser and does not need to be modified every time the format of the underlying document changes.
 
-## Getting Started with the CLI
+1. The tool leverages [OpenAI Completions Api](https://platform.openai.com/docs/guides/gpt/completions-api) to process the text.
+2. It is fully configurable, refer to the section on `Fine tuning the adpater` below for more information.
+3. the tool can be used both as a standalone python application or as a microservice running inside a larger application.
+
+
+## Getting Started
+
+### Using it as a standaloe app 
 
 Step 1. download the project code
 Step 2. install the latest version of python
@@ -17,9 +24,18 @@ Step 7.1. run the program:
 python document-content-extractor.py
 ```
 
-### Potential Issues:
+#### Application input
+_coming soon_
 
-### ClientConnectorCertificateError
+#### Application output
+1. CLI output
+2. results file
+3. corrections file
+4. metrics file
+
+#### Potential Issues:
+
+##### ClientConnectorCertificateError
 
 After running the app, you may run into the following error:
 ```
@@ -101,7 +117,7 @@ Here are a few steps you can try to resolve the issue:
 
 -----
 
-## Using the API
+### Using is as microservice
 
 Step 6.2. Once you've completed step 5 in Getting started with the CLI, then start the app with the command:
 ```
@@ -122,11 +138,11 @@ Step 7.2 Now you can use your favoriate api invocation method. To test we recomm
 _screenshots coming soon_
 
 ### API input
-_coming soon_
+The extractor api takes a single parameter as input and that's the location of the file that needs to be parsed. All other parameters are read from the config.ini file. 
 
 ### API output
 
-The api will always return a dictionary with the following keys:
+The extractor api will always return a dictionary with the following keys:
 ```
 {
   'result' : None if there was an error processing the request otherwise it is a dictinoary whose keys are each of the fields to be extracted, and the value is the extracted content from the file
@@ -180,7 +196,7 @@ Here's a breakdown of the parameters defined in the file:
 - `prompt_threshold`: Specifies the threshold (in tokens) for the total number of tokens to exceed max_tokens and still be processed. if the prompt and the response exceeds max_tokens by this threshold then the extractor will fail and report an error to the user. However, if it is less than the threshold then the extractor will truncate the prompt by chopping off the excess tokens from the end of the file to be parsed and then processing the text. This threshold should be set to greater than 0 if you're sure that the last few characters of text from the file to be parsed are not useful.
 - `stopwords`: Specifies the file containing stopwords, which are words to be excluded from the prompt generation process. For more information on this file refer to the section below.
 
-## 2. parser_config
+### 2. parser_config
 
 The `parser_config` file is used in conjunction with the provided code to generate prompts for querying the OpenAI API. By understanding the structure of the `parser_config` file and how it is used in conjunction with the provided code, you can customize the fields to extract and generate prompts accordingly. Remember to update the `parser_config` file and adjust the code as needed to suit your specific use case.
 
@@ -207,7 +223,7 @@ Here's a summary of how the `parser_config` file is used and how it can be modif
 5. **Prompt Customization**: If you want to modify the prompt generation process, you can update the values in the `config.ini` file. The parameters that control prompt generation include `prefix`, `midfix`, `suffix`, `max_tokens`, `prompt_threshold`, and `stopwords_file`. Adjusting these parameters allows you to fine-tune the prompts based on your project requirements.
 
 
-## 2. stopwords
+### 2. stopwords
 
 The stopwords file is a text file used in the prompt clean up process. If a prompt is too long, the OpenAI api will refuse to process the prompt. So to workaround that, one of the steps is to eliminate unnecessary words in the prompt. The stopwords file specified in `config.ini` contains a list of words or phrases in each new line of the file, which will be eliminated from the prompt if found. e.g. if the file looks like this:
 ```
