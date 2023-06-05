@@ -215,7 +215,7 @@ from
 you
 am i
 ```
-then when the prompt is being [cleaned up](), if the phrases "from", "you" and "am i" are found they will be deleted from the prompt. Eliminated stopwords can also reduce the cost of processing by reducing the number of tokens that OpenAI needs to process, however eliminated critical words and phrases by mistake can lead to incorrect value extraction.
+then when the prompt is being [cleaned up](https://github.com/atbasu/document-content-extractor/blob/9e2a573e417096d30a2cecc5fb9ceea6c478328d/content_extractor.py#L237), if the phrases "from", "you" and "am i" are found they will be deleted from the prompt. Eliminated stopwords can also reduce the cost of processing by reducing the number of tokens that OpenAI needs to process, however eliminated critical words and phrases by mistake can lead to incorrect value extraction.
 
 
 
