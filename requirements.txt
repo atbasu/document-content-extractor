@@ -86,6 +86,7 @@ pycparser==2.21
 pydot==1.4.2
 Pygments==2.15.1
 PyMuPDF==1.22.2
+PyJWT==2.1.0
 pyparsing==3.0.9
 PyPDF2==3.0.1
 pytest==7.3.1
