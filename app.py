@@ -47,9 +47,15 @@ def process_text():
               print(f"file/{timeString}.pdf")
               filePath = f"file/{timeString}.pdf"
               file.save(filePath)
-              run_id, run_time, file_path, api_key, usage, model, json_result = asyncio.run(extract_content(filePath))
+              result = asyncio.run(extract_content(filePath))
               os.remove(filePath)
-              return json_result
+              os.remove(result["result_file"])
+              result.pop('api_key', None)
+              result.pop('config', None)
+              result.pop('env', None)
+              result.pop('result_file', None)
+              result.pop('file_path', None)
+              return result
 
     except Exception as e:
        app.logger.error(str(e))
