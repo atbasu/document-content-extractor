@@ -197,7 +197,7 @@ Here's a summary of how the `parser_config` file is used and how it can be modif
 
 3. **Generating Prompts**: The provided code utilizes the `parser_config` file to generate prompts for extracting field values. The code reads the `parser_config` and selects fields where `required` is set to `true`. It then splits the selected fields into chunks based on the `splits` value specified in the `config.ini` file.
 
-4. **Prompt Generation**: The [prompts are generated]() by concatenating the selected fields for each chunk. The resulting prompts follow a specific format:
+4. **Prompt Generation**: The [prompts are generated](https://github.com/atbasu/document-content-extractor/blob/3780420e1f71ff93059c3c635951d41eaa17f3c9/content_extractor.py#L261) by concatenating the selected fields for each chunk. The resulting prompts follow a specific format:
    - Prefix: The value is set in the `config.ini` file and forms the first part of the prompt.
    - Field list: After the prefix, each field is listed along with its description.
    - Midfix: The midfix text specified in the `config.ini` file is then added to the prompt
@@ -215,7 +215,7 @@ from
 you
 am i
 ```
-then when the prompt is being cleaned up, if the phrases "from", "you" and "am i" are found they will be deleted from the prompt. Eliminated stopwords can also reduce the cost of processing by reducing the number of tokens that OpenAI needs to process, however eliminated critical words and phrases by mistake can lead to incorrect value extraction.
+then when the prompt is being [cleaned up](), if the phrases "from", "you" and "am i" are found they will be deleted from the prompt. Eliminated stopwords can also reduce the cost of processing by reducing the number of tokens that OpenAI needs to process, however eliminated critical words and phrases by mistake can lead to incorrect value extraction.
 
 
 
