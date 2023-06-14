@@ -117,7 +117,7 @@ Here are a few steps you can try to resolve the issue:
 
 -----
 
-### Using is as microservice
+### Using it as microservice
 
 Step 6.2. Once you've completed step 5 in Getting started with the CLI, then start the app with the command:
 ```
