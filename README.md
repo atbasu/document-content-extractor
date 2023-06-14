@@ -6,6 +6,9 @@ The Document Content Extractor is a tool that can be used to extract semantic in
 3. the tool can be used both as a standalone python application or as a microservice running inside a larger application.
 
 
+## How does it work?
+_coming soon_
+
 ## Getting Started
 
 ### Using it as a standaloe app 
