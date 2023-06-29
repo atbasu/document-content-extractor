@@ -2,12 +2,12 @@
   "SignerName": {
     "type": "string",
     "required": true,
-    "description": "This is the name of the borrower or the signer, not the vendor."
+    "description": "This is the name of the borrower or the signer, not the vendor/agent."
   },
   "Email": {
     "type": "string",
     "required": true,
-    "description": "This is the email of each signer"
+    "description": "This is the email of the borrower or the signer, not the vendor/agent"
   },
   "PhoneNumber": {
     "type": "string",
@@ -32,7 +32,7 @@
   "PropertyAddress": {
     "type": "string",
     "required": true,
-    "description": "The address of the property for this loan"
+    "description": "The complete address of the property for this loan, including street, city, and postal code."
   },
   "AppointmentAddress": {
     "type": "string",
@@ -82,7 +82,7 @@
   "AgentFee": {
     "type": "string",
     "required": true,
-    "description": "The fee charged by the agent in dollars. If only one fee is listed then it's not the agent fee."
+    "description": "The fee charged by the agent in dollars, if applicable."
   },
   "WitnessNumber": {
     "type": "string",

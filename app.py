@@ -35,8 +35,8 @@ def token_required(f):
     return decorated
 
 
-async def extract_content(file_path):
-    return run_app(file_path)
+async def extract_content(file_path, console_log_level, app_logger=None):
+    return run_app(file_path, console_log_level, app_logger)
 
 
 # Routes
@@ -44,16 +44,25 @@ async def extract_content(file_path):
 @token_required
 def process_text():
     file_path = ''
+
     try:
+        app.logger.info("Reading file in process_text")
         file = request.files['file']
+        # Retrieve the logging level from the request object
+        log_level = request.headers.get('X-Log-Level')
+        console_log_level = getattr(logging, log_level.upper(), None) if log_level else None
+
         if file:
             time_string = time.strftime("%Y%m%d-%H%M%S")
-            print(f"file/{time_string}.pdf")
+            app.logger.info(f"writing {file} to file/{time_string}.pdf")
+            app.logger.info(f"writing {file} to file/{time_string}.pdf")
+            # print(f"file/{time_string}.pdf")
             file_path = f"file/{time_string}.pdf"
             file.save(file_path)
-            result = asyncio.run(extract_content(file_path))
+            result = asyncio.run(extract_content(file_path, console_log_level, app.logger))
             os.remove(file_path)
             return result
+
 
     except Exception as e:
         app.logger.error(str(e))

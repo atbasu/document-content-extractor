@@ -6,7 +6,7 @@ def longest_value_length(field_name):
     return max(map(len, field_name))
 
 
-def generate_ascii_table_from_string(input_str, config):
+def generate_ascii_table_from_string(input_str, config, logger=None):
     # Split input string by newline characters to get each row
     lines = input_str.strip().split('\n')
     possible_fields = config.keys()
@@ -49,7 +49,7 @@ def generate_ascii_table_from_string(input_str, config):
     return table_str, result
 
 
-def generate_ascii_table_from_json(input_json, config):
+def generate_ascii_table_from_json(input_json, config, logger):
     # Split input string by newline characters to get each row
     # lines = input_json.strip().split('\n')
     possible_fields = config.keys()

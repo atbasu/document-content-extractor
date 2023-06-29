@@ -6,7 +6,7 @@ import aiohttp
 import openai
 from transformers import GPT2Tokenizer
 
-from utils import read_env_vars, read_stopwords
+from utils import read_env_vars, read_stopwords, format_prompt, get_formatted_prompt_fields
 
 # unused code in the section below, but kept for future testing
 '''
@@ -231,10 +231,25 @@ def extract_content(text, config, api_key, model, results_folder, file_name, run
 
 text_blob_new = '\nhappy go lucky Appointment Date and Time : 10/12/2022 10:00 AM\nFile Number: ORG-369006\nOrder on behalf of : DEANNA GOOD, Product type : Home Equity Loan\n'
 
+def extract_values_old(text, keys):
+    result = {}
+    keys = list(keys)
+    for i, key in enumerate(keys):
+        start_index = text.find(key)
+        if start_index != -1:
+            start_index += len(key) + 2  # Skip the key and the colon, accounting for the space after colon
+            if i < len(keys) - 1:
+                end_index = text.find(keys[i + 1], start_index)
+            else:
+                end_index = len(text)
+            value = text[start_index:end_index].strip().split(',')[0]
+            result[key] = value
+    return result
+
 '''
 
 
-def clean_prompt(prompt_text, prompt_padding, max_tokens=2048, prompt_threshold=150, stop_words=None):
+def clean_prompt(prompt_text, prompt_padding, max_tokens=2048, prompt_threshold=150, stop_words=None, logger=None):
     # Initialize the tokenizer
     if stop_words is None:
         stop_words = set()
@@ -255,10 +270,13 @@ def clean_prompt(prompt_text, prompt_padding, max_tokens=2048, prompt_threshold=
     # Join the tokens back into a text string
     cleaned_text = tokenizer.convert_tokens_to_string(prompt_tokens)
 
+    if logger:
+        logger.debug("Cleaned prompt: %s", cleaned_text)
+
     return cleaned_text
 
 
-def get_prompts(event, env_vars):
+def get_prompts(event, env_vars, logger=None):
     text = event['text']
     config = event['config']
 
@@ -271,8 +289,10 @@ def get_prompts(event, env_vars):
     stopwords_file = env_vars['stopwords']
 
     # only get those fields where required is set to true
-    fields = [f'{field}: {properties["description"]}' for field, properties in config.items() if
-              properties["required"]]
+    def is_required(field, properties):
+        return properties["required"]
+
+    fields = get_formatted_prompt_fields(config, is_required)
 
     # split the fields into chunks where number of chunks = splits
     num_fields = len(fields)
@@ -280,17 +300,15 @@ def get_prompts(event, env_vars):
     chunk_size = num_fields // splits
     default_stopwords = read_stopwords(stopwords_file)
 
-    cleaned_text = clean_prompt(text, prefix + suffix + midfix, max_tokens, prompt_threshold)
+    cleaned_text = clean_prompt(text, prefix + suffix + midfix, max_tokens, prompt_threshold, default_stopwords, logger)
 
     # generate prompts using each chunk so that number of prompts  = splits
     prompts = [
-        f"Extract the values of the following fields from the closing confirmation text:\n" + '\n'.join(
-            fields[i * chunk_size:(i + 1) * chunk_size]) +
-        f"\nDo not change the name of the fields. Text:\n{cleaned_text}"
+        format_prompt(prefix, fields[i * chunk_size:(i + 1) * chunk_size], midfix, cleaned_text, suffix)
         for i in range(splits)
     ]
 
-    return prompts
+    return prompts, cleaned_text
 
 
 class OpenAIException(Exception):
@@ -300,7 +318,7 @@ class OpenAIException(Exception):
         super().__init__(f"{status_code} - {message}")
 
 
-async def process_chunk(prompt, model, api_key, retry_delay=1, max_retries=3, response_tokens=500):
+async def process_chunk(prompt, model, api_key, retry_delay=1, max_retries=3, response_tokens=500, logger=None):
     async with aiohttp.ClientSession() as session:
         openai.api_key = api_key
         retries = 0
@@ -342,17 +360,20 @@ async def process_chunk(prompt, model, api_key, retry_delay=1, max_retries=3, re
                     if "Invalid Authentication" in error_message:
                         raise OpenAIException(
                             401,
-                            "Invalid Authentication: Ensure the correct API key and requesting organization are being used."
+                            "Invalid Authentication: Ensure the correct API key and requesting organization are being "
+                            "used."
                         )
                     elif "Incorrect API key provided" in error_message:
                         raise OpenAIException(
                             401,
-                            "Incorrect API key provided: Ensure the API key used is correct, clear your browser cache, or generate a new one."
+                            "Incorrect API key provided: Ensure the API key used is correct, clear your browser "
+                            "cache, or generate a new one."
                         )
                     elif "You must be a member of an organization to use the API" in error_message:
                         raise OpenAIException(
                             401,
-                            "You must be a member of an organization to use the API: Contact us to get added to a new organization or ask your organization manager to invite you."
+                            "You must be a member of an organization to use the API: Contact us to get added to a new "
+                            "organization or ask your organization manager to invite you."
                         )
                 elif response.status == 429:
                     if "Rate limit reached for requests" in error_message:
@@ -363,116 +384,119 @@ async def process_chunk(prompt, model, api_key, retry_delay=1, max_retries=3, re
                     elif "You exceeded your current quota, please check your plan and billing details" in error_message:
                         raise OpenAIException(
                             429,
-                            "You exceeded your current quota, please check your plan and billing details: Apply for a quota increase."
+                            "You exceeded your current quota, please check your plan and billing details: Apply for a "
+                            "quota increase."
                         )
                     elif "The engine is currently overloaded, please try again later" in error_message:
                         raise OpenAIException(
                             429,
-                            "The engine is currently overloaded, please try again later: Please retry your requests after a brief wait."
+                            "The engine is currently overloaded, please try again later: Please retry your requests "
+                            "after a brief wait."
                         )
                 else:
                     raise OpenAIException(response.status, error_message)
 
 
-async def process_prompts(event, env_vars):
+async def process_prompts(event, env_vars, logger=None):
     # get all the prompts that need to be queried
-    prompts = get_prompts(event, env_vars)
+    prompts, cleaned_text = get_prompts(event=event, env_vars=env_vars, logger=logger)
 
     tasks = []
     # query prompts asynchronously
     async with aiohttp.ClientSession() as session:
         for prompt in prompts:
             task = asyncio.ensure_future(
-                process_chunk(prompt, event['model'], event['api_key'], env_vars['retry_delay'],
-                              env_vars['max_retries']))
+                process_chunk(
+                    prompt=prompt,
+                    model=event['model'],
+                    api_key=event['api_key'],
+                    retry_delay=env_vars['retry_delay'],
+                    max_retries=env_vars['max_retries'],
+                    response_tokens=env_vars['response_tokens'],
+                    logger=logger
+                )
+            )
             tasks.append(task)
 
         responses = await asyncio.gather(*tasks)
-        return prompts, responses
+        return prompts, responses, cleaned_text
 
 
-def extract_values(text, keys):
-    result = {}
-    keys = list(keys)
-    for i, key in enumerate(keys):
-        start_index = text.find(key)
-        if start_index != -1:
-            start_index += len(key) + 2  # Skip the key and the colon, accounting for the space after colon
-            if i < len(keys) - 1:
-                end_index = text.find(keys[i + 1], start_index)
-            else:
-                end_index = len(text)
-            value = text[start_index:end_index].strip().split(',')[0]
-            result[key] = value
-    return result
+def extract_values(text):
+    # Split the text into lines
+    lines = text.split('\n')
+    # Create an empty dictionary to store the key-value pairs
+    data_dict = {}
+    # Process each line
+    for line in lines:
+        if ':' in line:
+            key, value = line.split(':', 1)
+            # Strip any leading/trailing whitespace from the key and value
+            key = key.strip()
+            value = value.strip()
+            data_dict[key] = value
+    return data_dict
 
 
-def process_results(prompts, results, keys):
+def process_results(prompts, results, logger=None):
     # process response by:
-    # 1. creating an output text file containing all prompts and entire response
+    # 1. log all prompts and entire response
     # 2. extracting all key value pairs in the format [..]: [...]
     # 3. generating usage statistics
-    # return all three
-    output_file = ''
+    # return last two
     output_dict = dict()
     usage_dict = defaultdict(int)
     # pattern = r'\[(.*?)\]:\s*\[(.*?)\]'
     # pattern = r'\[\s*(.*?)\s*\]:\s*(?:\[(.*?)\]|([^\[\]\n]*))|(?:\s*(.*?)\s*:\s*\[(.*?)\])'
 
     for i, (prompt, response) in enumerate(zip(prompts, results)):
-        output_file += f'----------------[prompt {i + 1}]------------------\n{prompt}\n[response {i + 1}]\n{response}\n----------------------------------\n'
-        """
-        matches = re.findall(pattern, response["choices"][0]["text"])
-        for match in matches:
-            output_dict.update(extract_kv(match))
-        """
-        output_dict.update(extract_values(response["choices"][0]["text"], keys))
+        if logger:
+            logger.info(f"[prompt {i + 1}]: {prompt}")
+            logger.info(f"[response {i + 1}]: {response}")
+
+        output_dict.update(extract_values(response["choices"][0]["text"]))
 
         for key, value in response["usage"].items():
             usage_dict[key] += value
 
     usage_dict = dict(usage_dict)
 
-    return output_file, output_dict, usage_dict
+    return output_dict, usage_dict
 
 
-def extract_content_async(event, context):
-    """
-    This code assumes that if it is used as an AWS Lambda function,
-    the necessary dependencies (aiohttp and openai)
-    are installed in the Lambda environment
-    """
-    env_vars: object = read_env_vars(
+def extract_content_async(event, logger=None):
+    env_vars = read_env_vars(
         ["splits", "retry_delay", "max_retries", "prefix", "midfix", "suffix", "max_tokens", "prompt_threshold",
-         "stopwords"]
+         "stopwords", "response_tokens"]
     )
     config = event['config']
     try:
         loop = asyncio.get_event_loop()
-        prompts, results = loop.run_until_complete(
+        prompts, results, cleaned_text = loop.run_until_complete(
             process_prompts(
-                event,
-                env_vars
+                event=event,
+                env_vars=env_vars,
+                logger=logger
             )
         )
 
-        output_file, result, usage_data = process_results(prompts, results, config.keys())
-
-        file_name = f"{event['results_folder']}/{event['file_name']}_run_results_{event['run_id']}.txt"
-        with open(file_name, 'w') as outfile:
-            outfile.write(output_file)
+        result, usage_data = process_results(prompts, results, logger)
 
         return {
             'result': result,
+            'cleaned_text': cleaned_text,
             'usage_data': usage_data,
-            'result_file': file_name,
+            'result_file': f"{event['file_name']}_run_results_{event['run_id']}.json",
             'error': None
         }
     except OpenAIException as e:
         error_message = f"OpenAI API Exception: {traceback.format_exc()}"
+        if logger is not None:
+            logger.error(error_message)
         # Return the error message and exception object
         return {
             'result': None,
+            'cleaned_text': None,
             'usage_data': None,
             'result_file': None,
             'error': dict(
@@ -482,9 +506,12 @@ def extract_content_async(event, context):
         }
     except Exception as e:
         error_message = f"Unexpected Exception: {traceback.format_exc()}"
+        if logger is not None:
+            logger.error(error_message)
         # Return the error message and exception object
         return {
             'result': None,
+            'cleaned_text': None,
             'usage_data': None,
             'result_file': None,
             'error': dict(
