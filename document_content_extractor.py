@@ -263,6 +263,9 @@ def main():
         log_level=args.log_level
     )
 
+    if dce_logger is not None:
+        dce_logger.debug(f"Final Result : {json.dumps(result, indent=4)}")
+
     file_path = result['file_path']
     result['result_file'] = write_result_to_json(result, result['result_file'], results_folder)
 
@@ -310,8 +313,17 @@ def main():
         # store processing results in a json file
         # print run results
         clear_screen()
-        print(
-            f"File processing results:\n------------------------\n1. file : {file_path}\n2. metrics : {metrics_file}\n3. parsed results : {result_file}\n4. corrections : {corrections_file}\n\t- You can enter the prompt in {correction_prompt_file_name} in Chat GPT(https://chat.openai.com/) to identify fixes for the errors\n5. cost : {usage['total_tokens'] * per_token_costs[args.model]}\n6. total run time : {result['run_time']}")
+        corrections_text = (
+            f"{corrections_file}\n\t- You can enter the prompt in {correction_prompt_file_name} in Chat GPT (https://chat.openai.com/) to identify fixes for the errors"
+            if corrections_file else "N/A"
+        )
+        print(f"File processing results:\n------------------------\n"
+              f"1. file: {file_path}\n"
+              f"2. metrics: {metrics_file}\n"
+              f"3. parsed results: {result_file}\n"
+              f"4. corrections: {corrections_text}\n"
+              f"5. cost: {usage['total_tokens'] * per_token_costs[args.model]}\n"
+              f"6. total run time: {result['run_time']}")
     else:
         print(
             f"There was an error in processing this file:\n{result['error']['msg']}"

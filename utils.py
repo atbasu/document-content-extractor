@@ -14,7 +14,9 @@ def get_formatted_prompt_fields(config, filter_func):
             filter_func(field, properties)]
 
 
-def format_prompt(prefix, fields_list, midfix, cleaned_text, suffix):
+def format_prompt(prefix, fields_list, midfix, cleaned_text, suffix, logger=None):
+    if logger:
+        logger.debug(f"Fields being formatted: {fields_list}")
     return f"{prefix}\n" + '\n'.join(fields_list) + f"\n{midfix}\n{cleaned_text}\n{suffix}"
 
 
