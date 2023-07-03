@@ -483,7 +483,7 @@ def extract_content_async(event, logger=None):
         result, usage_data = process_results(prompts, results, logger)
 
         return {
-            'result': result,
+            'data': result,
             'cleaned_text': cleaned_text,
             'usage_data': usage_data,
             'result_file': f"{event['file_name']}_run_results_{event['run_id']}.json",
@@ -495,7 +495,7 @@ def extract_content_async(event, logger=None):
             logger.error(error_message)
         # Return the error message and exception object
         return {
-            'result': None,
+            'data': None,
             'cleaned_text': None,
             'usage_data': None,
             'result_file': None,
@@ -510,7 +510,7 @@ def extract_content_async(event, logger=None):
             logger.error(error_message)
         # Return the error message and exception object
         return {
-            'result': None,
+            'data': None,
             'cleaned_text': None,
             'usage_data': None,
             'result_file': None,
