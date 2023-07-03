@@ -40,7 +40,7 @@ async def extract_content(file_path, console_log_level, app_logger=None):
 
 
 # Routes
-@app.route('/api/v1/multipart-parse', methods=['POST'])
+@app.route('/api/v1/ai-parse', methods=['POST'])
 @token_required
 def process_text():
     file_path = ''
@@ -63,12 +63,35 @@ def process_text():
             os.remove(file_path)
             return result
 
-
     except Exception as e:
         app.logger.error(str(e))
         error_message = "An error occurred while processing the request"
         os.remove(file_path)
         return jsonify({'error': error_message}), 500
+
+
+@app.route('/api/v1/closewise-format', methods=['POST'])
+@token_required
+def format_for_closewise(data):
+    output = {
+        "borrowers": [],
+        "propertyAddress": {},
+        "closingAddress": {}
+    }
+    for key, value in data.items():
+        if "Address_" in key:
+            address_type, address_field = key.split("_")[0], key.split("_")[1]
+            output[address_type][address_field] = value
+        elif key.startswith("borrowerName_") and value:
+            borrower_num = key.split("_")[1]
+            borrower_info = {
+                "borrowerName": data.get(f"borrowerName_{borrower_num}"),
+                "borrowerCellPhone": data.get(f"borrowerCellPhone_{borrower_num}")
+            }
+            output["borrowers"].append(borrower_info)
+        elif 'borrower' not in key:
+            output[key] = value
+    return output
 
 
 if __name__ == '__main__':
