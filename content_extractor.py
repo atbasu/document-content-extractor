@@ -1,4 +1,5 @@
 import asyncio
+import math
 import traceback
 from collections import defaultdict
 
@@ -279,6 +280,8 @@ def clean_prompt(prompt_text, prompt_padding, max_tokens=2048, prompt_threshold=
 def get_prompts(event, env_vars, logger=None):
     text = event['text']
     config = event['config']
+    if logger:
+        logger.debug("Parser config as read from file: %s", config)
 
     splits = env_vars['splits']
     prefix = env_vars['prefix']
@@ -297,14 +300,17 @@ def get_prompts(event, env_vars, logger=None):
     # split the fields into chunks where number of chunks = splits
     num_fields = len(fields)
     splits = min(splits, num_fields)
-    chunk_size = num_fields // splits
+    chunk_size = math.ceil(num_fields / splits)
+    if logger:
+        logger.debug(f"Chunk size based on {num_fields} fields and {splits} splits = {chunk_size}")
+
     default_stopwords = read_stopwords(stopwords_file)
 
     cleaned_text = clean_prompt(text, prefix + suffix + midfix, max_tokens, prompt_threshold, default_stopwords, logger)
 
     # generate prompts using each chunk so that number of prompts  = splits
     prompts = [
-        format_prompt(prefix, fields[i * chunk_size:(i + 1) * chunk_size], midfix, cleaned_text, suffix)
+        format_prompt(prefix, fields[i * chunk_size:(i + 1) * chunk_size], midfix, cleaned_text, suffix, logger)
         for i in range(splits)
     ]
 
