@@ -111,7 +111,7 @@ def write_metrics(
     return file_name
 
 
-def check_for_errors(result, cleaned_text, config, env_vars, logger=None):
+def check_for_errors(result, logger=None):
     if logger:
         logger.info("Validating output")
 
@@ -157,8 +157,10 @@ def check_for_errors(result, cleaned_text, config, env_vars, logger=None):
                 def filter_corrections(field, properties):
                     return field in corrections.keys()
 
-                fields = get_formatted_prompt_fields(config, filter_func=filter_corrections)
-                prompt = format_prompt(env_vars["prefix"], fields, env_vars["midfix"], cleaned_text, env_vars["suffix"])
+                env_vars = result['env_vars']
+                fields = get_formatted_prompt_fields(result['config'], filter_func=filter_corrections)
+                prompt = format_prompt(env_vars["prefix"], fields, env_vars["midfix"], result['cleaned_text'],
+                                       env_vars["suffix"])
                 returned_values = ''
                 correct_values = ''
                 for key, value in corrections.items():
@@ -173,66 +175,13 @@ def check_for_errors(result, cleaned_text, config, env_vars, logger=None):
             return corrections, correction_prompt
 
 
-def run_app(file_path, console_log_level, app_logger=None):
-    if app_logger:
-        app_logger.info("Running the application")
-    dce_run_id = uuid.uuid4().hex
-    # Set up logging
-    dce_logger = setup_logging(dce_run_id, console_log_level)
+def get_parser_result(api_key, env_vars, file_path, model, results_folder, run_id, parser_config, log_level):
+    # set up dce logger
+    dce_logger = setup_logging(run_id, log_level)
 
-    env_vars = read_env_vars()
-    with open(env_vars['parser_config'], 'r') as f:
+    # read parser config
+    with open(parser_config, 'r') as f:
         config = json.load(f)
-
-    start_time = time.monotonic()
-    result = upload_and_process_document(
-        file_folder=env_vars['file_folder'],
-        results_folder=env_vars['results_folder'],
-        doc_file_path=file_path,
-        openai_api_key=env_vars['api_key'],
-        openai_model=env_vars['model'],
-        config=config,
-        config_path=env_vars['parser_config'],
-        dce_run_id=dce_run_id,
-        dce_logger=dce_logger
-    )
-
-    run_time = time.monotonic() - start_time
-    result.update(
-        dict(
-            env=env_vars,
-            run_id=dce_run_id,
-            run_time=run_time
-        )
-    )
-    if app_logger:
-        app_logger.info(f"Exiting application after running for {run_time}s with result : {result}")
-    return result
-
-
-def main():
-    # generate unique hex id for this run of the extractor
-    run_id = uuid.uuid4().hex
-
-    # read all environment variables form config.ini
-    env_vars = read_env_vars()
-    args = read_args(env_vars['api_key'], env_vars['model'], env_vars['parser_config'], env_vars['splits'])
-    model = args.model
-    api_key = args.api_key
-    file_path = args.file
-    results_folder = env_vars['results_folder']
-    with open(args.parser_config, 'r') as f:
-        config = json.load(f)
-
-    # Set up logging
-    dce_logger = setup_logging(run_id, args.log_level)
-
-    per_token_costs = {
-        'text-davinci-003': 0.02 / 1000,
-        'text-ada-001': 0.0004 / 1000,
-        'text-babbage-001': 0.0005 / 1000,
-        'text-curie-001': 0.002 / 1000
-    }
 
     # start timer to calculate run time
     start_time = time.monotonic()
@@ -247,27 +196,88 @@ def main():
         dce_run_id=run_id,
         dce_logger=dce_logger
     )
-    file_path = result['file_path']
     # stop timer
     run_time = time.monotonic() - start_time
     # print(result)
+    result.update(
+        dict(
+            env=env_vars,
+            run_id=run_id,
+            run_time=run_time,
+            config=config,
+        )
+    )
+    return result, dce_logger
+
+
+def run_app(file_path, console_log_level, app_logger=None):
+    if app_logger:
+        app_logger.info("Running the application")
+    dce_run_id = uuid.uuid4().hex
+    # Set up logging
+
+    env_vars = read_env_vars()
+    result, dce_logger = get_parser_result(
+        api_key=env_vars['api_key'],
+        env_vars=env_vars,
+        file_path=file_path,
+        model=env_vars['model'],
+        results_folder=env_vars['results_folder'],
+        run_id=dce_run_id,
+        parser_config=env_vars['parser_config'],
+        log_level=console_log_level
+    )
+
+    if app_logger:
+        app_logger.info(f"Exiting application after running for {result['run_time']}s with result : {result}")
+    return result
+
+
+def main():
+    # generate unique hex id for this run of the extractor
+    run_id = uuid.uuid4().hex
+
+    # read all environment variables form config.ini
+    env_vars = read_env_vars()
+    args = read_args(env_vars['api_key'], env_vars['model'], env_vars['parser_config'], env_vars['splits'])
+    model = args.model
+    api_key = args.api_key
+    file_path = args.file
+    results_folder = env_vars['results_folder']
+
+    per_token_costs = {
+        'text-davinci-003': 0.02 / 1000,
+        'text-ada-001': 0.0004 / 1000,
+        'text-babbage-001': 0.0005 / 1000,
+        'text-curie-001': 0.002 / 1000
+    }
+
+    result, dce_logger = get_parser_result(
+        api_key=api_key,
+        env_vars=env_vars,
+        file_path=file_path,
+        model=model,
+        results_folder=results_folder,
+        run_id=run_id,
+        parser_config=args.parser_config,
+        log_level=args.log_level
+    )
+
+    file_path = result['file_path']
     result['result_file'] = write_result_to_json(result, result['result_file'], results_folder)
 
     if result['error'] is None:
-        json_result = result['result']
+        json_result = result['data']
         usage = result['usage_data']
         result_file = result['result_file']
         # print(json_result)
         # dump data into files and print result in ascii table
-        ascii_table = generate_ascii_table_from_json(json_result, config, dce_logger)
+        ascii_table = generate_ascii_table_from_json(json_result, result['config'], dce_logger)
         clear_screen()
         print(ascii_table)
         # check if there are any incorrect extractions
         corrections, correction_prompt = check_for_errors(
-            result=json_result,
-            cleaned_text=result['cleaned_text'],
-            config=config,
-            env_vars=env_vars,
+            result=result,
             logger=dce_logger
         )
         corrections_file = ''
@@ -287,7 +297,7 @@ def main():
         # store metrics in a csv file
         metrics_file = write_metrics(
             dce_run_id=run_id,
-            run_time=run_time,
+            run_time=result['run_time'],
             file_path=file_path,
             api_key=result['api_key'],
             success_rate=success_rate,
@@ -301,7 +311,7 @@ def main():
         # print run results
         clear_screen()
         print(
-            f"File processing results:\n------------------------\n1. file : {file_path}\n2. metrics : {metrics_file}\n3. parsed results : {result_file}\n4. corrections : {corrections_file}\n\t- You can enter the prompt in {correction_prompt_file_name} in Chat GPT(https://chat.openai.com/) to identify fixes for the errors\n5. cost : {usage['total_tokens'] * per_token_costs[args.model]}\n6. total run time : {run_time}")
+            f"File processing results:\n------------------------\n1. file : {file_path}\n2. metrics : {metrics_file}\n3. parsed results : {result_file}\n4. corrections : {corrections_file}\n\t- You can enter the prompt in {correction_prompt_file_name} in Chat GPT(https://chat.openai.com/) to identify fixes for the errors\n5. cost : {usage['total_tokens'] * per_token_costs[args.model]}\n6. total run time : {result['run_time']}")
     else:
         print(
             f"There was an error in processing this file:\n{result['error']['msg']}"
