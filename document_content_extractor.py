@@ -154,23 +154,7 @@ def check_for_errors(result, logger=None):
         else:
             correction_prompt = ''
             if corrections:
-                def filter_corrections(field, properties):
-                    return field in corrections.keys()
-
-                env_vars = result['env_vars']
-                fields = get_formatted_prompt_fields(result['config'], filter_func=filter_corrections)
-                prompt = format_prompt(env_vars["prefix"], fields, env_vars["midfix"], result['cleaned_text'],
-                                       env_vars["suffix"])
-                returned_values = ''
-                correct_values = ''
-                for key, value in corrections.items():
-                    returned_values += f"{key} : {result[key]}\n"
-                    correct_values += f"{key} : {value['correct_value']}\n{value['justification']}\n"
-                correction_prompt = f"I am using the open AI completion api to to process the following prompt:\n" \
-                                    f"----------------------\n{prompt}\n----------------------\nHowever, the value" \
-                                    f" of the following fields were extracted incorrectly:\n{returned_values}\nit" \
-                                    f" should be returning:\n{correct_values}\nHow can the definition of the wrongly" \
-                                    " extracted fields be corrected in the prompt to extract the right values?"
+                correction_prompt = generate_correction_prompt(corrections, result)
 
             return corrections, correction_prompt
 

@@ -73,28 +73,39 @@ def process_text():
 @app.route('/api/v1/closewise-format', methods=['POST'])
 @token_required
 def format_for_closewise(data):
+    try:
+        data = request.headers.get('data', {})
+        data = dict(data)
+    except Exception as e:
+        return jsonify({'error': 'Invalid data format'}), 400
+
     output = {
         "borrowers": [],
         "propertyAddress": {},
         "closingAddress": {}
     }
-    for key, value in data.items():
-        if value:
-            if "Address_" in key:
-                address_type, address_field = key.split("_")[0], key.split("_")[1]
-                output[address_type][address_field] = value
-            elif "borrower" in key:
-                attribute, num = key.split("_")
-                # Adjust index to 0-based
-                index = int(num) - 1
-                # added empty list elements till the length of list matches the current index
-                while index >= len(output["borrowers"]):
-                    output["borrowers"].append({})
-                borrower_info = output["borrowers"][index]
-                borrower_info[attribute] = value
-            else:
-                output[key] = value
-    return output
+
+    try:
+        for key, value in data.items():
+            if value:
+                if "Address_" in key:
+                    address_type, address_field = key.split("_")[0], key.split("_")[1]
+                    output[address_type][address_field] = value
+                elif "borrower" in key:
+                    attribute, num = key.split("_")
+                    # Adjust index to 0-based
+                    index = int(num) - 1
+                    # added empty list elements till the length of list matches the current index
+                    while index >= len(output["borrowers"]):
+                        output["borrowers"].append({})
+                    borrower_info = output["borrowers"][index]
+                    borrower_info[attribute] = value
+                else:
+                    output[key] = value
+    except Exception as e:
+        return jsonify({'error': 'Error processing data'}), 500
+
+    return jsonify(output)
 
 
 if __name__ == '__main__':
