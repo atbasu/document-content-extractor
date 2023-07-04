@@ -72,7 +72,7 @@ def process_text():
 
 @app.route('/api/v1/closewise-format', methods=['POST'])
 @token_required
-def format_for_closewise(data):
+def format_for_closewise():
     try:
         data = request.headers.get('data', {})
         data = dict(data)

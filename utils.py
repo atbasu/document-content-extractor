@@ -10,6 +10,7 @@ from pdfminer.high_level import extract_text
 
 
 def generate_correction_prompt(corrections, result):
+    # noinspection PyUnusedLocal
     def filter_corrections(field, properties):
         return field in corrections.keys()
 
@@ -76,7 +77,7 @@ def setup_logging(run_id, console_level=logging.NOTSET):
     return logger
 
 
-def read_document_PYPDF2(file_path):
+def read_document_pypdf2(file_path):
     with open(file_path, 'rb') as file:
         pdf_reader = PyPDF2.PdfReader(file)
         text = ""
