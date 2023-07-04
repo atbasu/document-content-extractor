@@ -1,4 +1,5 @@
 import csv
+import traceback
 import uuid
 from datetime import datetime
 
@@ -111,6 +112,28 @@ def write_metrics(
     return file_name
 
 
+def generate_correction_prompt(corrections, result):
+    # noinspection PyUnusedLocal
+    def filter_corrections(field, properties):
+        return field in corrections.keys()
+
+    env_vars = result['env_vars']
+    fields = get_formatted_prompt_fields(result['config'], filter_func=filter_corrections)
+    prompt = format_prompt(env_vars["prefix"], fields, env_vars["midfix"], result['cleaned_text'],
+                           env_vars["suffix"])
+    returned_values = ''
+    correct_values = ''
+    for key, value in corrections.items():
+        returned_values += f"{key} : {result[key]}\n"
+        correct_values += f"{key} : {value['correct_value']}\n{value['justification']}\n"
+    correction_prompt = f"I am using the open AI completion api to to process the following prompt:\n" \
+                        f"----------------------\n{prompt}\n----------------------\nHowever, the value" \
+                        f" of the following fields were extracted incorrectly:\n{returned_values}\nit" \
+                        f" should be returning:\n{correct_values}\nHow can the definition of the wrongly" \
+                        " extracted fields be corrected in the prompt to extract the right values?"
+    return correction_prompt
+
+
 def check_for_errors(result, logger=None):
     if logger:
         logger.info("Validating output")
@@ -118,13 +141,19 @@ def check_for_errors(result, logger=None):
     corrections = dict()
     # Ask the user if any values are incorrect
     user_input = input('Are any of the values incorrect? (y/n): ')
+    bad_input_attempt = 0
 
     while True:
         # Check if the user entered a valid input
         if user_input.lower() != 'y' and user_input.lower() != 'n':
-            print('Invalid input. Please enter either y, n.')
-            user_input = input('Are there any other fields that need to be corrected? (y/n): ')
-            continue
+            if bad_input_attempt < 3:
+                print('Invalid input. Please enter either y, n.')
+                bad_input_attempt += 1
+                user_input = input('Are any of the values incorrect? (y/n): ')
+                continue
+            else:
+                print("I am sorry I am unable to understand the input, so i am moving on.")
+                return None, ''
         # If the user says values are incorrect
         elif user_input.lower() == 'y':
             # Ask the user for the field name that needs to be corrected
@@ -154,23 +183,7 @@ def check_for_errors(result, logger=None):
         else:
             correction_prompt = ''
             if corrections:
-                def filter_corrections(field, properties):
-                    return field in corrections.keys()
-
-                env_vars = result['env_vars']
-                fields = get_formatted_prompt_fields(result['config'], filter_func=filter_corrections)
-                prompt = format_prompt(env_vars["prefix"], fields, env_vars["midfix"], result['cleaned_text'],
-                                       env_vars["suffix"])
-                returned_values = ''
-                correct_values = ''
-                for key, value in corrections.items():
-                    returned_values += f"{key} : {result[key]}\n"
-                    correct_values += f"{key} : {value['correct_value']}\n{value['justification']}\n"
-                correction_prompt = f"I am using the open AI completion api to to process the following prompt:\n" \
-                                    f"----------------------\n{prompt}\n----------------------\nHowever, the value" \
-                                    f" of the following fields were extracted incorrectly:\n{returned_values}\nit" \
-                                    f" should be returning:\n{correct_values}\nHow can the definition of the wrongly" \
-                                    " extracted fields be corrected in the prompt to extract the right values?"
+                correction_prompt = generate_correction_prompt(corrections, result)
 
             return corrections, correction_prompt
 
@@ -274,26 +287,34 @@ def main():
         usage = result['usage_data']
         result_file = result['result_file']
         # print(json_result)
-        # dump data into files and print result in ascii table
+
+        dce_logger.info("dumping data into files and print result in ascii table")
         ascii_table = generate_ascii_table_from_json(json_result, result['config'], dce_logger)
         clear_screen()
         print(ascii_table)
-        # check if there are any incorrect extractions
-        corrections, correction_prompt = check_for_errors(
-            result=result,
-            logger=dce_logger
-        )
+
+        dce_logger.info("checking if there are any incorrect extractions")
+        corrections = dict()
         corrections_file = ''
         correction_prompt_file_name = ''
-        if corrections:
-            corrections_file = write_result_to_json(
-                corrections,
-                f"{file_path.split('/')[-1]}_corrections_{run_id}.json",
-                results_folder
+        try:
+            corrections, correction_prompt = check_for_errors(
+                result=result,
+                logger=dce_logger
             )
-            correction_prompt_file_name = f"{results_folder}/{file_path.split('/')[-1]}_corrections_prompt_{run_id}.txt"
-            with open(correction_prompt_file_name, 'w') as outfile:
-                outfile.write(correction_prompt)
+            if corrections:
+                corrections_file = write_result_to_json(
+                    corrections,
+                    f"{file_path.split('/')[-1]}_corrections_{run_id}.json",
+                    results_folder
+                )
+                correction_prompt_file_name = f"{results_folder}/{file_path.split('/')[-1]}_corrections_prompt_{run_id}.txt"
+                with open(correction_prompt_file_name, 'w') as outfile:
+                    outfile.write(correction_prompt)
+        except Exception as e:
+            if dce_logger is not None:
+                dce_logger.critical(
+                    f"An error occurred while checking for any incorrect extractions: {str(e)}\n\n{traceback.format_exc()}")
 
         # calculate success rate as %age of fields that were extracted correctly
         success_rate = 100 - (len(corrections) / len(json_result) * 100)

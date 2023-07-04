@@ -65,10 +65,52 @@ def process_text():
 
 
     except Exception as e:
-        app.logger.error(str(e))
-        error_message = "An error occurred while processing the request"
+        # delete the file
         os.remove(file_path)
-        return jsonify({'error': error_message}), 500
+        # log the an error message
+        error_msg_with_traceback = f"An error occurred while processing the request: {str(e)}\n\n{traceback.format_exc()}"
+        app.logger.error(error_msg_with_traceback)
+        return jsonify(error=error_msg_with_traceback), 500
+
+
+@app.route('/api/v1/generate-corrections-prompt', methods=['POST'])
+@token_required
+def process_corrections():
+    try:
+        app.logger.info("getting corrections and result dictionaries from the request header")
+        corrections = request.headers.get('corrections')
+        result = request.headers.get('result')
+
+        app.logger.info("checking if both corrections and result are present")
+        if corrections is None or result is None:
+            return jsonify(error='Invalid request. Corrections and result headers are required.'), 400
+
+        app.logger.info("parsing the dictionaries from the string format")
+        corrections = eval(corrections)
+        result = eval(result)
+
+        app.logger.info("checking if corrections and result are dictionaries")
+        if not isinstance(corrections, dict) or not isinstance(result, dict):
+            return jsonify(error='Corrections and result should be dictionaries.'), 400
+
+        app.logger.info("checking if result dictionary has necessary attributes")
+        required_attributes = ['env_vars', 'config', 'cleaned_text']
+        missing_attributes = []
+        for attr in required_attributes:
+            if attr not in result:
+                missing_attributes.append(f"Missing attribute '{attr}' in result dictionary.")
+        if missing_attributes:
+            return jsonify(error=missing_attributes), 400
+
+        app.logger.info("calling the generate_correction_prompt function")
+        prompt = generate_correction_prompt(corrections, result)
+
+        # Return the prompt as a JSON response
+        return jsonify(prompt=prompt)
+
+    except Exception as e:
+        error_msg_with_traceback = f"An error occurred: {str(e)}\n\n{traceback.format_exc()}"
+        return jsonify(error=error_msg_with_traceback), 500
 
 
 if __name__ == '__main__':
