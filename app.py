@@ -49,7 +49,7 @@ def process_text():
         app.logger.info("Reading file in process_text")
         file = request.files['file']
         # Retrieve the logging level from the request object
-        log_level = request.headers.get('X-Log-Level')
+        log_level = request.headers.get('X-Log-Level', 'NOTSET')
         console_log_level = getattr(logging, log_level.upper(), None) if log_level else None
 
         if file:
