@@ -87,8 +87,9 @@ def format_for_closewise():
     and returns the output in the required format.
     """
     try:
-        data = request.headers.get('data', {})
-        data = dict(data)
+        data = request.get_json()
+        if not isinstance(data, dict):
+            return jsonify({'error': 'Invalid data format. Expected JSON object.'}), 400
     except Exception as e:
         return jsonify({'error': f'Invalid data format: {str(e)}'}), 400
 
