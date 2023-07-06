@@ -1,5 +1,4 @@
 from flask import Flask, jsonify, request, make_response
-from flask_jwt_extended import JWTManager
 from functools import wraps
 from document_content_extractor import *
 import time
