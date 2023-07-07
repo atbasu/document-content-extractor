@@ -12,5 +12,8 @@ six==1.16.0
 transformers==4.30.2
 Werkzeug==2.2.3
 tensorflow==2.2.0
+tensorflow-estimator==2.11.0
+tensorflow-io-gcs-filesystem==0.32.0
+flax==0.6.4
 nest_asyncio
 gevent
