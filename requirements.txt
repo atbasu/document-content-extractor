@@ -15,5 +15,6 @@ tensorflow==2.2.0
 tensorflow-estimator==2.11.0
 tensorflow-io-gcs-filesystem==0.32.0
 flax==0.6.4
+cryptography==40.0.2
 nest_asyncio
 gevent
