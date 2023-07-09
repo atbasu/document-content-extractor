@@ -117,7 +117,7 @@ def generate_correction_prompt(corrections, result):
     def filter_corrections(field, properties):
         return field in corrections.keys()
 
-    env_vars = result['env_vars']
+    env_vars = result['env']
     fields = get_formatted_prompt_fields(result['config'], filter_func=filter_corrections)
     prompt = format_prompt(env_vars["prefix"], fields, env_vars["midfix"], result['cleaned_text'],
                            env_vars["suffix"])
