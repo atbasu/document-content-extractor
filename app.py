@@ -71,7 +71,7 @@ def process_text():
     except Exception as e:
         # delete the file
         os.remove(file_path)
-        # log the an error message
+        # log an error message
         error_msg_with_traceback = f"An error occurred while processing the request: {str(e)}\n\n{traceback.format_exc()}"
         app.logger.error(error_msg_with_traceback)
         return jsonify(error=error_msg_with_traceback), 500
@@ -81,23 +81,21 @@ def process_text():
 @token_required
 def process_corrections():
     try:
-        app.logger.info("getting corrections and result dictionaries from the request header")
-        corrections = request.headers.get('corrections')
-        result = request.headers.get('result')
+        app.logger.info("Getting corrections and result dictionaries from the request body")
+        data = request.get_json()
 
-        app.logger.info("checking if both corrections and result are present")
+        app.logger.info("Checking if corrections and result are present")
+        corrections = data.get('corrections')
+        result = data.get('result')
+
         if corrections is None or result is None:
-            return jsonify(error='Invalid request. Corrections and result headers are required.'), 400
+            return jsonify(error='Invalid request. Corrections and result are required.'), 400
 
-        app.logger.info("parsing the dictionaries from the string format")
-        corrections = eval(corrections)
-        result = eval(result)
-
-        app.logger.info("checking if corrections and result are dictionaries")
+        app.logger.info("Checking if corrections and result are dictionaries")
         if not isinstance(corrections, dict) or not isinstance(result, dict):
             return jsonify(error='Corrections and result should be dictionaries.'), 400
 
-        app.logger.info("checking if result dictionary has necessary attributes")
+        app.logger.info("Checking if result dictionary has necessary attributes")
         required_attributes = ['env_vars', 'config', 'cleaned_text']
         missing_attributes = []
         for attr in required_attributes:
@@ -106,7 +104,7 @@ def process_corrections():
         if missing_attributes:
             return jsonify(error=missing_attributes), 400
 
-        app.logger.info("calling the generate_correction_prompt function")
+        app.logger.info("Calling the generate_correction_prompt function")
         prompt = generate_correction_prompt(corrections, result)
 
         # Return the prompt as a JSON response
