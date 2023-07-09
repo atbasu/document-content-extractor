@@ -55,7 +55,6 @@ def process_text():
         if file:
             time_string = time.strftime("%Y%m%d-%H%M%S")
             app.logger.info(f"writing {file} to file/{time_string}.pdf")
-            app.logger.info(f"writing {file} to file/{time_string}.pdf")
             # print(f"file/{time_string}.pdf")
             file_path = f"file/{time_string}.pdf"
             file.save(file_path)
