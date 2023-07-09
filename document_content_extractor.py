@@ -157,16 +157,17 @@ def check_for_errors(result, logger=None):
         # If the user says values are incorrect
         elif user_input.lower() == 'y':
             # Ask the user for the field name that needs to be corrected
+            data = result['data']
             field_names = input('Enter a coma separated list of fields that need to be corrected? ').split(',')
             # Check if the field name is valid
             for field_name in field_names:
                 field_name = field_name.strip()
-                if field_name not in result.keys():
+                if field_name not in data.keys():
                     print(f'{field_name} is an invalid field_name. Please enter a valid field name.')
                     continue
                 # Ask the user for the correct value
                 correct_value = input(f"What should the correct value be for {field_name}?")
-                if correct_value == result[field_name]:
+                if correct_value == data[field_name]:
                     print('This value is the same as what was extracted, moving on to the next one.')
                     continue
                 # Ask the user for a justification
@@ -299,7 +300,7 @@ def main():
         correction_prompt_file_name = ''
         try:
             corrections, correction_prompt = check_for_errors(
-                result=json_result,
+                result=result,
                 logger=dce_logger
             )
             if corrections:
