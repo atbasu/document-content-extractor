@@ -40,9 +40,15 @@ async def extract_content(file_path, console_log_level, app_logger=None):
 
 
 # Routes
-@app.route('/api/v1/multipart-parse', methods=['POST'])
+@app.route('/api/v1/ai-parse', methods=['POST'])
 @token_required
 def process_text():
+    """
+    This function takes a file as input in the request header
+    and then uses openAI apis to extract required information
+    from it. It then returns the extracted variables in the
+    'data' attribute in a dictionary.
+    """
     file_path = ''
 
     try:
@@ -61,7 +67,6 @@ def process_text():
             result = asyncio.run(extract_content(file_path, console_log_level, app.logger))
             os.remove(file_path)
             return result
-
 
     except Exception as e:
         # delete the file
