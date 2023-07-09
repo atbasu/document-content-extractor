@@ -299,7 +299,7 @@ def main():
         correction_prompt_file_name = ''
         try:
             corrections, correction_prompt = check_for_errors(
-                result=result,
+                result=json_result,
                 logger=dce_logger
             )
             if corrections:
