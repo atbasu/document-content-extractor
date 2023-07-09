@@ -124,7 +124,7 @@ def generate_correction_prompt(corrections, result):
     returned_values = ''
     correct_values = ''
     for key, value in corrections.items():
-        returned_values += f"{key} : {result[key]}\n"
+        returned_values += f"{key} : {result['data'][key]}\n"
         correct_values += f"{key} : {value['correct_value']}\n{value['justification']}\n"
     correction_prompt = f"I am using the open AI completion api to to process the following prompt:\n" \
                         f"----------------------\n{prompt}\n----------------------\nHowever, the value" \
