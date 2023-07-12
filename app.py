@@ -1,39 +1,38 @@
-import asyncio
+from flask import Flask, jsonify, request, make_response
 from functools import wraps
-
-import jwt
-import nest_asyncio
-from flask import Flask, jsonify, request
-
 from document_content_extractor import *
-
+import time
+import jwt
+import asyncio
+import nest_asyncio
 nest_asyncio.apply()
+from gevent.pywsgi import WSGIServer
 
 app = Flask(__name__)
 app.config['JWT_SECRET_KEY'] = 'closewise-secret'
 
-
 # Decorators
 def token_required(f):
-    @wraps(f)
-    def decorated(*args, **kwargs):
-
-        token = None
-        if 'Authorization' in request.headers:
+   @wraps(f)
+   def decorated(*args, **kwargs):
+       
+       token = None
+       if 'Authorization' in request.headers:
             token = request.headers['Authorization'].split()[1]
-        if not token:
+       if not token:
             return jsonify({'message': 'Token is missing!'}), 401
-        try:
-            data = jwt.decode(token, app.config['JWT_SECRET_KEY'], algorithms=['HS256'])
-            request.token_data = data
-        except jwt.ExpiredSignatureError:
+       try:
+          data = jwt.decode(token, app.config['JWT_SECRET_KEY'], algorithms=['HS256'])
+          request.token_data = data
+       except jwt.ExpiredSignatureError:
             return jsonify({'message': 'Token has expired!'}), 401
-        except jwt.InvalidTokenError:
-            return jsonify({'message': 'Invalid token!'}), 401
-        return f(*args, **kwargs)
+       except jwt.InvalidTokenError:
+            return jsonify({'message': 'Invalid token!'}), 401     
+       return f(*args, **kwargs)
+   return decorated
 
-    return decorated
-
+async def extract_content(filePath):
+   return run_app(filePath)
 
 async def extract_content(file_path, console_log_level, app_logger=None):
     return run_app(file_path, console_log_level, app_logger)
@@ -125,4 +124,6 @@ def format_for_closewise():
 
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.debug = True
+    http_server = WSGIServer(('', 4500), app)
+    http_server.serve_forever()
