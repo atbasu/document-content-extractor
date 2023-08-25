@@ -7,7 +7,98 @@ The Document Content Extractor is a tool that can be used to extract semantic in
 
 
 ## How does it work?
-_coming soon_
+![Application Architecture Diagram](https://drive.google.com/file/d/1uNPrD4Lv24479cOdb5dTBAGqtpUqwvhX/view?usp=sharing)
+
+
+
+## Code Walkthrough
+
+![Flowchart Operation FLowchart](image_url)
+
+### [App.py](https://github.com/atbasu/document-content-extractor/blob/master/app.py)
+
+#### Code Summary
+
+The provided code section establishes a Flask app with several routes for processing and extracting content from files through OpenAI APIs. It includes a token authentication decorator and two main routes: one for processing text content from files and another for generating correction prompts based on request data. JWT tokens are employed for authentication.
+
+#### Function Descriptions
+
+1. `token_required` (Line 15-30)
+   - Decorator function for token authentication.
+   - Parses and validates JWT tokens from request headers.
+   - Executes the wrapped function if the token is valid.
+   - Returns appropriate error responses for missing or invalid tokens.
+
+2. `extract_content` (Line 33-36)
+   - Asynchronous function for extracting content from files.
+   - Calls the `run_app` function from the `document_content_extractor` module.
+   - Returns the result of the content extraction.
+
+3. `process_text` (Line 39-89)
+   - Route function for processing text content from files.
+   - Decorated with `token_required`.
+   - Reads a file from the request and extracts logging information.
+   - Saves the file temporarily, processes it asynchronously, and removes it.
+   - Returns the result of the content extraction as a JSON response.
+
+4. `process_corrections` (Line 92-136)
+   - Route function for generating correction prompts.
+   - Decorated with `token_required`.
+   - Retrieves corrections and result data from the JSON request.
+   - Validates input data and ensures required attributes are present.
+   - Calls the `generate_correction_prompt` function.
+   - Returns the generated prompt as a JSON response.
+
+5. `if __name__ == '__main__'` (Line 139-141)
+   - Entry point for running the Flask app locally.
+   - Initiates the Flask app with debugging enabled.
+
+###  [document_content_extractor.py](https://github.com/atbasu/document-content-extractor/blob/master/document_content_extractor.py)
+
+#### Code Summary
+
+The `document_content_extractor.py` section of the code provides functions for uploading, processing, and analyzing documents using OpenAI's APIs. It handles tasks such as processing documents, generating metrics, identifying corrections, and outputting results.
+
+#### Function Descriptions
+
+1. `upload_and_process_document` (Line 23-59)
+   - Uploads and processes a document using OpenAI's APIs.
+   - Reads document content and extracts information asynchronously.
+   - Returns the processing result with additional data.
+
+2. `write_metrics` (Line 62-90)
+   - Writes processing metrics to a CSV file.
+   - Creates a CSV file with data about the document processing.
+   - Returns the name of the created CSV file.
+
+3. `generate_correction_prompt` (Line 93-121)
+   - Generates a correction prompt based on incorrect extractions.
+   - Creates a prompt to ask how wrongly extracted fields can be corrected.
+
+4. `check_for_errors` (Line 124-211)
+   - Checks for incorrect values extracted from the document.
+   - Asks the user to verify if values are incorrect and collect corrections.
+   - Returns corrections and a correction prompt if needed.
+
+5. `get_parser_result` (Line 214-256)
+   - Retrieves parser results and logs.
+   - Sets up logging and parses document content using APIs.
+   - Returns the result and a logger.
+
+6. `run_app` (Line 259-277)
+   - Executes the application to process a document.
+   - Utilizes various functions to process and output results.
+
+7. `main` (Line 280-448)
+   - Entry point for running the document processing application.
+   - Reads environment variables and user inputs.
+   - Processes document, generates metrics, identifies corrections, and outputs results.
+
+8. `if __name__ == '__main__'` (Line 451-453)
+   - Entry point for running the `main` function if the script is executed directly.
+
+
+s 
 
 ## Getting Started
 
