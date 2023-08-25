@@ -15,4 +15,6 @@ The Document Content Extractor is a tool that can be used to extract semantic in
 
 ## [Getting Started](https://github.com/atbasu/document-content-extractor/wiki/Getting-Started)
 
+## [Adjusting Configuration for Accurate Content Extraction](https://github.com/atbasu/document-content-extractor/wiki/Adjusting-Configuration-for-Accurate-Content-Extraction#introduction)
+
 
