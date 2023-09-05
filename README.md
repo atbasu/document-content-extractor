@@ -9,13 +9,12 @@ The Document Content Extractor is a tool that can be used to extract semantic in
 
 ## [How does it work?](https://github.com/atbasu/document-content-extractor/wiki/How-does-it-work%3F)
 
-
 ## [Code Walkthrough](https://github.com/atbasu/document-content-extractor/wiki/Code-Walkthrough)
-
 
 ## [Getting Started](https://github.com/atbasu/document-content-extractor/wiki/Getting-Started)
 
 ## [Adjusting Configuration for Accurate Content Extraction](https://github.com/atbasu/document-content-extractor/wiki/Adjusting-Configuration-for-Accurate-Content-Extraction#introduction)
 
+## [Frequently Asked Questions](https://github.com/atbasu/document-content-extractor/wiki/Frequently-Asked-Questions)
 
 > <span style="color: #FFA500; font-size: 1.2em;">⚠️</span> **Caution:** Before using this application on your data, ensure you verify that the open ai api meets the necessary requirements for the data you want to process by visiting their [security and compliance page](https://openai.com/security)
