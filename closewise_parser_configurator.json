@@ -87,7 +87,7 @@
   "appointmentDateTime": {
     "type": "string",
     "required": true,
-    "description": "date and time of appointment for closing/signing"
+    "description": "date and time of appointment for closing/signing, change with npm moment.js format('MM/DD/YYYY HH:MM')."
   },
   "fileNumber": {
     "type": "string",

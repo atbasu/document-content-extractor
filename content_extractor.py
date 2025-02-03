@@ -331,19 +331,22 @@ async def process_chunk(prompt, model, api_key, retry_delay=1, max_retries=3, re
 
         while retries <= max_retries:
             response = await session.post(
-                f'https://api.openai.com/v1/engines/{model}/completions',
+                f'https://api.openai.com/v1/chat/completions',  # Correct endpoint
                 headers={
                     'Content-Type': 'application/json',
                     'Authorization': f'Bearer {api_key}'
                 },
                 json={
-                    'prompt': prompt,
+                    'model': model,  # Use "model" as a key for chat completions
+                    'messages': [
+                        {'role': 'system', 'content': 'You are a helpful assistant.'},
+                        {'role': 'user', 'content': prompt}
+                    ],
                     'max_tokens': response_tokens,
                     'temperature': 0.7,
                     'top_p': 1,
                     'frequency_penalty': 0,
-                    'presence_penalty': 0,
-                    'echo': False
+                    'presence_penalty': 0
                 }
             )
 
@@ -460,12 +463,40 @@ def process_results(prompts, results, logger=None):
             logger.info(f"[prompt {i + 1}]: {prompt}")
             logger.info(f"[response {i + 1}]: {response}")
 
-        output_dict.update(extract_values(response["choices"][0]["text"]))
+        # Handle response content based on model type
+        try:
+            if "text" in response["choices"][0]:
+                # For older completion models (e.g., Davinci)
+                output_dict.update(extract_values(response["choices"][0]["text"]))
+            elif "message" in response["choices"][0]:
+                # For chat models (e.g., GPT-4)
+                output_dict.update(extract_values(response["choices"][0]["message"]["content"]))
+            else:
+                logger.error(f"Unexpected response structure: {response}")
+        except KeyError as e:
+            logger.error(f"KeyError accessing response content: {e}")
+
+        # for key, value in response["usage"].items():
+        #     usage_dict[key] += value
 
         for key, value in response["usage"].items():
-            usage_dict[key] += value
+            # Check if value is an integer
+            if isinstance(value, int):
+                usage_dict[key] += value
+            # Check if value is a dictionary and merge it
+            elif isinstance(value, dict):
+                if key not in usage_dict:
+                    usage_dict[key] = {}  # Initialize as a dictionary if needed
+                if isinstance(usage_dict[key], dict):
+                    usage_dict[key].update(value)
+                else:
+                    logger.warning(f"Conflict: Expected dict at usage_dict[{key}], got {type(usage_dict[key])}")
+            else:
+                logger.warning(f"Unexpected data type for usage key {key}: {type(value)}")
 
     usage_dict = dict(usage_dict)
+
+    
 
     return output_dict, usage_dict
 

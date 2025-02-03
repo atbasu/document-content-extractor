@@ -7,7 +7,33 @@ import time
 
 import PyPDF2
 from pdfminer.high_level import extract_text
+from pdf2image import convert_from_path
+from pytesseract import image_to_string
+import docx
+import email
 
+def pdf_to_text(file_path):
+    try:
+        with open(file_path, 'rb') as pdf_file_obj:
+            pdf_reader = PyPDF2.PdfReader(pdf_file_obj)
+            text = ''
+            for page in pdf_reader.pages:
+                text += page.extract_text() or ''
+        return text
+    except Exception as e:
+        print(f"PyPDF2 extraction failed: {e}")
+        return ''
+
+
+def ocr_pdf_to_text(file_path):
+    try:
+        images = convert_from_path(file_path)
+        text = ''
+        for image in images:
+            text += image_to_string(image)
+        return text
+    except Exception as e:
+        raise ValueError(f"OCR extraction failed: {str(e)}")
 
 def get_formatted_prompt_fields(config, filter_func):
     return [f'{field}: {properties["description"]}' for field, properties in config.items() if
@@ -64,8 +90,49 @@ def read_document_pypdf2(file_path):
         return text
 
 
+# def read_document(file_path):
+#     text = extract_text(file_path)
+#     return text
 def read_document(file_path):
-    text = extract_text(file_path)
+    if file_path.endswith('.pdf'):
+        print('Processing PDF...')
+        try:
+            text = pdf_to_text(file_path)
+            if not text.strip():
+                print('PDF extraction empty, trying OCR...')
+                text = ocr_pdf_to_text(file_path)
+        except Exception as e:
+            raise ValueError(f"Failed to extract text from PDF: {str(e)}")
+
+    elif file_path.endswith('.txt'):
+        print('Processing text file...')
+        with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+            text = f.read()
+
+    elif file_path.endswith('.docx'):
+        print('Processing Word document...')
+        try:
+            doc = docx.Document(file_path)
+            text = '\n'.join([paragraph.text for paragraph in doc.paragraphs])
+        except Exception as e:
+            raise ValueError(f"Failed to read DOCX file: {str(e)}")
+
+    elif file_path.endswith('.eml'):
+        print('Processing EML file...')
+        try:
+            with open(file_path, 'rb') as f:
+                content = f.read()
+            msg = email.message_from_bytes(content)
+            text = ''
+            for part in msg.walk():
+                if part.get_content_type() == 'text/plain':
+                    text += part.get_payload(decode=True).decode('utf-8', errors='ignore')
+        except Exception as e:
+            raise ValueError(f"Failed to read EML file: {str(e)}")
+
+    else:
+        raise ValueError('Unsupported file type')
+
     return text
 
 

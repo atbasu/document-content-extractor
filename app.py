@@ -9,7 +9,7 @@ nest_asyncio.apply()
 from gevent.pywsgi import WSGIServer
 
 app = Flask(__name__)
-app.config['JWT_SECRET_KEY'] = 'closewise-secret'
+app.config['JWT_SECRET_KEY'] = 'closewise-secret-key-jwt-1!'
 
 # Decorators
 def token_required(f):
