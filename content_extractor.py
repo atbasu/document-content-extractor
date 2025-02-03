@@ -310,7 +310,8 @@ def get_prompts(event, env_vars, logger=None):
 
     # generate prompts using each chunk so that number of prompts  = splits
     prompts = [
-        format_prompt(prefix, fields[i * chunk_size:(i + 1) * chunk_size], midfix, cleaned_text, suffix, logger)
+        format_prompt(prefix, [field.replace('"', '') for field in fields[i * chunk_size:(i + 1) * chunk_size]], midfix,
+                       cleaned_text, suffix, logger)
         for i in range(splits)
     ]
 
@@ -339,7 +340,6 @@ async def process_chunk(prompt, model, api_key, retry_delay=1, max_retries=3, re
                 json={
                     'model': model,  # Use "model" as a key for chat completions
                     'messages': [
-                        {'role': 'system', 'content': 'You are a helpful assistant.'},
                         {'role': 'user', 'content': prompt}
                     ],
                     'max_tokens': response_tokens,
@@ -441,36 +441,28 @@ def extract_values(text):
         if ':' in line:
             key, value = line.split(':', 1)
             # Strip any leading/trailing whitespace from the key and value
-            key = key.strip()
-            value = value.strip().rstrip(',')  # Remove trailing comma
+            key = key.strip().strip('"')
+            value = value.strip().strip('"').rstrip(',')  # Remove trailing comma
+            # Remove any trailing double quotes from the value
+            if value.endswith('"'):
+                value = value[:-1]
             data_dict[key] = value
     return data_dict
 
-
 def process_results(prompts, results, logger=None):
-    # process response by:
-    # 1. log all prompts and entire response
-    # 2. extracting all key value pairs in the format [..]: [...]
-    # 3. generating usage statistics
-    # return last two
     output_dict = dict()
     usage_dict = defaultdict(int)
-    # pattern = r'\[(.*?)\]:\s*\[(.*?)\]'
-    # pattern = r'\[\s*(.*?)\s*\]:\s*(?:\[(.*?)\]|([^\[\]\n]*))|(?:\s*(.*?)\s*:\s*\[(.*?)\])'
 
     for i, (prompt, response) in enumerate(zip(prompts, results)):
         if logger:
             logger.info(f"[prompt {i + 1}]: {prompt}")
             logger.info(f"[response {i + 1}]: {response}")
 
-        # Handle response content based on model type
         try:
             if "text" in response["choices"][0]:
-                # For older completion models (e.g., Davinci)
                 text = response["choices"][0]["text"].strip()
                 output_dict.update(extract_values(text))
             elif "message" in response["choices"][0]:
-                # For chat models (e.g., GPT-4)
                 text = response["choices"][0]["message"]["content"].strip()
                 output_dict.update(extract_values(text))
             else:
@@ -478,17 +470,12 @@ def process_results(prompts, results, logger=None):
         except KeyError as e:
             logger.error(f"KeyError accessing response content: {e}")
 
-        # for key, value in response["usage"].items():
-        #     usage_dict[key] += value
-
         for key, value in response["usage"].items():
-            # Check if value is an integer
             if isinstance(value, int):
                 usage_dict[key] += value
-            # Check if value is a dictionary and merge it
             elif isinstance(value, dict):
                 if key not in usage_dict:
-                    usage_dict[key] = {}  # Initialize as a dictionary if needed
+                    usage_dict[key] = {}
                 if isinstance(usage_dict[key], dict):
                     usage_dict[key].update(value)
                 else:
