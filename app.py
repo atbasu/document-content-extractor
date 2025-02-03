@@ -31,8 +31,8 @@ def token_required(f):
        return f(*args, **kwargs)
    return decorated
 
-async def extract_content(filePath):
-   return run_app(filePath)
+# async def extract_content(filePath):
+#    return run_app(filePath)
 
 async def extract_content(file_path, console_log_level, app_logger=None):
     return run_app(file_path, console_log_level, app_logger)

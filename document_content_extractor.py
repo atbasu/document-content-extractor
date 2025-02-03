@@ -45,7 +45,7 @@ def upload_and_process_document(
     result.update(
         dict(
             file_path=doc_file_path,
-            api_key=openai_api_key,
+            # api_key=openai_api_key,
             config=config,
         )
     )
@@ -215,10 +215,10 @@ def get_parser_result(api_key, env_vars, file_path, model, results_folder, run_i
     # print(result)
     result.update(
         dict(
-            env=env_vars,
+            # env=env_vars,
             run_id=run_id,
             run_time=run_time,
-            config=config,
+            # config=config,
         )
     )
     return result, dce_logger
