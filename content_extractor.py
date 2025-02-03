@@ -442,7 +442,7 @@ def extract_values(text):
             key, value = line.split(':', 1)
             # Strip any leading/trailing whitespace from the key and value
             key = key.strip()
-            value = value.strip()
+            value = value.strip().rstrip(',')  # Remove trailing comma
             data_dict[key] = value
     return data_dict
 
@@ -467,10 +467,12 @@ def process_results(prompts, results, logger=None):
         try:
             if "text" in response["choices"][0]:
                 # For older completion models (e.g., Davinci)
-                output_dict.update(extract_values(response["choices"][0]["text"]))
+                text = response["choices"][0]["text"].strip()
+                output_dict.update(extract_values(text))
             elif "message" in response["choices"][0]:
                 # For chat models (e.g., GPT-4)
-                output_dict.update(extract_values(response["choices"][0]["message"]["content"]))
+                text = response["choices"][0]["message"]["content"].strip()
+                output_dict.update(extract_values(text))
             else:
                 logger.error(f"Unexpected response structure: {response}")
         except KeyError as e:
@@ -496,10 +498,7 @@ def process_results(prompts, results, logger=None):
 
     usage_dict = dict(usage_dict)
 
-    
-
     return output_dict, usage_dict
-
 
 def extract_content_async(event, logger=None):
     env_vars = read_env_vars(

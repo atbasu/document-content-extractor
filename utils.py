@@ -205,7 +205,7 @@ def write_result_to_json(dictionary, file_name, folder_name):
 
         # Write result to JSON file
         with open(result_file_path, 'w') as f:
-            json.dump(dictionary, f, cls=CustomEncoder)
+            json.dump(dictionary, f, cls=CustomEncoder, ensure_ascii=False)
     else:
         result_file_path = "no data for this file"
 
